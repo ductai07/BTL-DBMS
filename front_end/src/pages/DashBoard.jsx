@@ -3,7 +3,7 @@ import { MdAttachMoney } from "react-icons/md";
 import { IoTicketOutline } from "react-icons/io5";
 import { MdOutlineLocalMovies } from "react-icons/md";
 import Chart from "../component/Chart";
-import RecentTransactions from "../component/RecentTransactions";
+import Table from "../component/Table";
 
 const DashBoard = () => {
   const revenueByMovies = [
@@ -12,6 +12,36 @@ const DashBoard = () => {
     { name: "The Batman", revenue: 73000000 },
     { name: "Top Gun: Maverick", revenue: 89000000 },
     { name: "Frozen II", revenue: 66000000 },
+  ];
+  const columnNames = [
+    "Transaction ID",
+    "Customer",
+    "Movie",
+    "Amount",
+    "Status",
+  ];
+  const transactions = [
+    {
+      id: "#TRX-123456",
+      customer: "John Doe",
+      movie: "Inception",
+      amount: 24.0,
+      status: "Completed",
+    },
+    {
+      id: "#TRX-123457",
+      customer: "Jane Smith",
+      movie: "The Matrix",
+      amount: 32.0,
+      status: "Completed",
+    },
+    {
+      id: "#TRX-123458",
+      customer: "Bob Johnson",
+      movie: "Interstellar",
+      amount: 28.0,
+      status: "Pending",
+    },
   ];
   return (
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
@@ -23,9 +53,7 @@ const DashBoard = () => {
             <MdAttachMoney />
           </div>
           <p class="text-2xl">$24,500</p>
-          <p class="text-neutral-600 text-sm text-green-600">
-            +12.5% from last month
-          </p>
+          <p class="text-sm text-green-600">+12.5% from last month</p>
         </div>
         <div class="bg-white p-5 rounded-xl shadow-md">
           <div class="flex items-center justify-between mb-4">
@@ -52,7 +80,7 @@ const DashBoard = () => {
           <Chart title={"Revenue by moives"} data={revenueByMovies} />
         </div>
       </div>
-      <RecentTransactions />
+      <Table columnNames={columnNames} transactions={transactions} />
     </div>
   );
 };

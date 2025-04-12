@@ -9,7 +9,14 @@ import { FaPercentage } from "react-icons/fa";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 const SideBar = () => {
-  const [focus, setFocus] = useState(0);
+  const [focus, setFocus] = useState(() => {
+    return parseInt(localStorage.getItem("focus")) || 0;
+  });
+
+  const handleFocus = (idx) => {
+    setFocus(idx);
+    localStorage.setItem("focus", idx);
+  };
   const listItems = [
     { icon: <LuLayoutDashboard />, nameItem: "Dashboard", path: "/dashboard" },
     { icon: <MdOutlineLocalMovies />, nameItem: "Movies", path: "/movies" },
@@ -33,7 +40,7 @@ const SideBar = () => {
           <Link to={item.path} key={item.icon}>
             <li
               onClick={() => {
-                setFocus(idx);
+                handleFocus(idx);
               }}
               className={
                 focus === idx
