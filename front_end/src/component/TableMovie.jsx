@@ -1,4 +1,7 @@
-const Table = ({ columnNames, transactions }) => {
+import { FaEdit } from "react-icons/fa";
+import { MdDeleteForever } from "react-icons/md";
+
+const TableMovie = ({ columnNames, movies }) => {
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
       <h3 className="text-lg font-semibold mb-4">Recent Transactions</h3>
@@ -11,24 +14,33 @@ const Table = ({ columnNames, transactions }) => {
           </tr>
         </thead>
         <tbody>
-          {transactions.map((trx) => (
+          {movies.map((movie) => (
             <tr
-              key={trx.id}
+              key={movie.id}
               className="border-b text-sm text-gray-700 hover:bg-gray-50"
             >
-              <td className="py-3">{trx.id}</td>
-              <td>{trx.customer}</td>
-              <td>{trx.movie}</td>
-              <td>${trx.amount.toFixed(2)}</td>
+              <td className="py-3">{movie.title}</td>
+              <td>{movie.duration}</td>
+              <td>{movie.genre}</td>
               <td>
                 <span
                   className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    trx.status === "Completed"
-                      ? "bg-gray-200 text-green-600"
+                    movie.status === "Now Showing"
+                      ? "bg-gray-200  text-green-600"
                       : "bg-yellow-100 text-yellow-800"
                   }`}
                 >
-                  {trx.status}
+                  {movie.status}
+                </span>
+              </td>
+              <td>
+                <span className="flex gap-2">
+                  <span>
+                    <FaEdit />
+                  </span>
+                  <span>
+                    <MdDeleteForever size={16} />
+                  </span>
                 </span>
               </td>
             </tr>
@@ -39,4 +51,4 @@ const Table = ({ columnNames, transactions }) => {
   );
 };
 
-export default Table;
+export default TableMovie;

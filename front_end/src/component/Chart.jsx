@@ -1,6 +1,6 @@
 import {
   Bar,
-  Line,
+  ResponsiveContainer,
   BarChart,
   XAxis,
   YAxis,
@@ -11,21 +11,23 @@ import {
 
 const Chart = ({ title, data }) => {
   return (
-    <div>
+    <div className="overflow-hidden">
       <h3>{title}</h3>
-      <BarChart
-        width={400}
-        height={250}
-        data={data}
-        margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-        <YAxis tick={{ fontSize: 12 }} />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="revenue" fill="#8884d8" barSize={30} />
-      </BarChart>
+      <ResponsiveContainer width="100%" height={250}>
+        <BarChart
+          width={400}
+          height={250}
+          data={data}
+          margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+          <YAxis tick={{ fontSize: 12 }} />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="revenue" fill="#8884d8" barSize={30} />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 };

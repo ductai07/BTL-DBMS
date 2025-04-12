@@ -3,7 +3,7 @@ import { MdAttachMoney } from "react-icons/md";
 import { IoTicketOutline } from "react-icons/io5";
 import { MdOutlineLocalMovies } from "react-icons/md";
 import Chart from "../component/Chart";
-import Table from "../component/Table";
+import RecentTransactions from "../component/RecentTransactions";
 
 const DashBoard = () => {
   const revenueByMovies = [
@@ -13,36 +13,7 @@ const DashBoard = () => {
     { name: "Top Gun: Maverick", revenue: 89000000 },
     { name: "Frozen II", revenue: 66000000 },
   ];
-  const columnNames = [
-    "Transaction ID",
-    "Customer",
-    "Movie",
-    "Amount",
-    "Status",
-  ];
-  const transactions = [
-    {
-      id: "#TRX-123456",
-      customer: "John Doe",
-      movie: "Inception",
-      amount: 24.0,
-      status: "Completed",
-    },
-    {
-      id: "#TRX-123457",
-      customer: "Jane Smith",
-      movie: "The Matrix",
-      amount: 32.0,
-      status: "Completed",
-    },
-    {
-      id: "#TRX-123458",
-      customer: "Bob Johnson",
-      movie: "Interstellar",
-      amount: 28.0,
-      status: "Pending",
-    },
-  ];
+
   return (
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
       <Header title={"Dash board"} />
@@ -80,7 +51,7 @@ const DashBoard = () => {
           <Chart title={"Revenue by moives"} data={revenueByMovies} />
         </div>
       </div>
-      <Table columnNames={columnNames} transactions={transactions} />
+      <RecentTransactions />
     </div>
   );
 };
