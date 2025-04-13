@@ -1,15 +1,29 @@
 const database = require('../config/database');
 module.exports.getCinemas = async (options = {}) => {
     try {
-        const { status, sortKey, sortValue, skip = 0, limit = 10 } = options;
+        const { status, sortKey, sortValue, search, skip = 0, limit = 10 } = options;
         const pool = await database.connect();
         const request = pool.request();
         // Xây dựng câu truy vấn động
         let query = 'SELECT * FROM Cinema';
+        let whereConditions = [];
         // Thêm điều kiện WHERE nếu có status
         if (status !== undefined && status !== null && status !== '') {
-            query += ' WHERE status = @status';
+            whereConditions.push('status = @status');
             request.input('status', status);
+        }
+        // Thêm điều kiện tìm kiếm nếu có searchKey và searchValue
+        if (search && search.key && search.value !== undefined) {
+            const validColumns = ['name', 'address', 'note', 'status'];
+            
+            if (validColumns.includes(search.key)) {
+                whereConditions.push(`${search.key} LIKE @searchValue`);
+                request.input('searchValue', `%${search.value}%`);
+            }
+        }
+        // Gộp tất cả điều kiện với WHERE
+        if (whereConditions.length > 0) {
+            query += ' WHERE ' + whereConditions.join(' AND ');
         }
         // Thêm sắp xếp nếu có sortKey và sortValue
         if (sortKey && sortValue) {
@@ -25,15 +39,44 @@ module.exports.getCinemas = async (options = {}) => {
             // Mặc định sắp xếp theo id
             query += ' ORDER BY id ASC';
         }
-        // Thêm phân trang - sử dụng skip từ helper pagination
+        // Thêm phân trang
         query += ' OFFSET @skip ROWS FETCH NEXT @limit ROWS ONLY';
         request.input('skip', skip);
         request.input('limit', limit);
-        
         const result = await request.query(query);
         return result.recordset;
     } catch (error) {
         throw new Error('Error fetching cinemas: ' + error.message);
+    }
+}
+// Cập nhật hàm đếm để hỗ trợ tìm kiếm
+module.exports.countCinemas = async (status, search = null) => {
+    try {
+        const pool = await database.connect();
+        const request = pool.request();
+        let query = 'SELECT COUNT(*) AS total FROM Cinema';
+        let whereConditions = [];
+        if (status !== undefined && status !== null && status !== '') {
+            whereConditions.push('status = @status');
+            request.input('status', status);
+        }
+        // Thêm điều kiện tìm kiếm nếu có searchKey và searchValue
+        if (search && search.key && search.value !== undefined) {
+            const validColumns = ['name', 'address', 'note', 'status'];
+            
+            if (validColumns.includes(search.key)) {
+                whereConditions.push(`${search.key} LIKE @searchValue`);
+                request.input('searchValue', `%${search.value}%`);
+            }
+        }
+        // Gộp tất cả điều kiện với WHERE
+        if (whereConditions.length > 0) {
+            query += ' WHERE ' + whereConditions.join(' AND ');
+        }
+        const result = await request.query(query);
+        return result.recordset[0].total;
+    } catch (error) {
+        throw new Error('Error counting cinemas: ' + error.message);
     }
 }
 module.exports.getCinemaById = async (id) => {
@@ -45,16 +88,6 @@ module.exports.getCinemaById = async (id) => {
         return result.recordset;
     } catch (error) {
         throw new Error('Error fetching data from database: ' + error.message);
-    }
-}
-module.exports.countCinemas = async () => {
-    try {
-        const pool = await database.connect();
-        let query = 'SELECT COUNT(*) AS total FROM Cinema';
-        const result = await pool.request().query(query);
-        return result.recordset[0].total;
-    } catch (error) {
-        throw new Error('Error counting cinemas: ' + error.message);
     }
 }
 module.exports.updateCinemaStatus = async (id, status) => {

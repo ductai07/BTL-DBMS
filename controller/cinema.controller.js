@@ -3,9 +3,20 @@ const paginationHelper = require('../helper/pagination');
 
 module.exports.index = async (req, res) => {
     try {
-        // Lấy tất cả tham số query
-        const { status, sortKey, sortValue, page = 1, limit = 10 } = req.query;
-        // Xác thực tham số sắp xếp
+        // Lấy tất cả tham số query, thêm searchKey và searchValue
+        const { status, sortKey, sortValue, page = 1, limit = 10, searchKey, searchValue } = req.query;
+        
+        // Xác thực tham số tìm kiếm
+        if (searchKey && !['name', 'address', 'note', 'status'].includes(searchKey)) {
+            return res.status(400).json({ 
+                error: 'Invalid search key. Valid options are: name, address, note, status' 
+            });
+        }
+        
+        // Chỉ xử lý tìm kiếm khi có cả key và value
+        const hasSearch = searchKey && searchValue !== undefined;
+        
+        // Xác thực tham số sắp xếp (giữ nguyên)
         if (sortKey && !['id', 'name', 'address', 'status'].includes(sortKey)) {
             return res.status(400).json({ 
                 error: 'Invalid sort key. Valid options are: id, name, address, status' 
@@ -16,7 +27,8 @@ module.exports.index = async (req, res) => {
                 error: 'Invalid sort value. Valid options are: asc, desc' 
             });
         }
-        // Xác thực tham số phân trang
+        
+        // Xác thực tham số phân trang (giữ nguyên)
         const pageNumber = parseInt(page) || 1;
         const limitNumber = parseInt(limit) || 10;
         if (pageNumber < 1) {
@@ -25,13 +37,23 @@ module.exports.index = async (req, res) => {
         if (limitNumber < 1 || limitNumber > 100) {
             return res.status(400).json({ error: 'Limit must be between 1 and 100' });
         }
-        // Lấy tổng số bản ghi để tính phân trang
-        const count = await cinemaModel.countCinemas(status);
+        
+        // Lấy tổng số bản ghi để tính phân trang, bổ sung params tìm kiếm
+        const count = await cinemaModel.countCinemas(status, hasSearch ? { key: searchKey, value: searchValue } : null);
+        
         // Sử dụng helper pagination để tính toán
         const paginationInfo = paginationHelper(pageNumber, count, limitNumber);
-        // Gọi hàm lấy dữ liệu với pagination
-        const data = await cinemaModel.getCinemas({status,sortKey,sortValue,skip:paginationInfo.skip,limit:paginationInfo.limitItems
+        
+        // Gọi hàm lấy dữ liệu với pagination, bổ sung params tìm kiếm
+        const data = await cinemaModel.getCinemas({
+            status,
+            sortKey,
+            sortValue,
+            search: hasSearch ? { key: searchKey, value: searchValue } : null,
+            skip: paginationInfo.skip,
+            limit: paginationInfo.limitItems
         });
+        
         // Trả về kết quả với thông tin phân trang
         res.status(200).json(data);
     } catch (error) {
