@@ -1,6 +1,6 @@
-const oneRouter = require('./one.router');
+const CinemaRouter = require('./cinema.router');
 
 module.exports = (app) => {
     const apiVersion = '/api/v1';
-    app.use(`${apiVersion}/one`, oneRouter);
+    app.use(`${apiVersion}/one/cinema`, CinemaRouter);
 }
