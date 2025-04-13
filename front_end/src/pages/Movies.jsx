@@ -2,33 +2,36 @@ import Header from "../component/Header";
 import Select from "../component/Select";
 import { FaPlus } from "react-icons/fa";
 import TableMovie from "../component/TableMovie";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import AddMovieModal from "../component/AddMovieModal";
 
 const Movies = () => {
-  const data = [
+  // Call api lay data
+  let [data, setData] = useState([
     {
       id: 1,
       title: "The Dark Knight",
-      duration: "152 min",
+      duration: 152,
       genre: "Action",
       status: "Now Showing",
     },
     {
       id: 2,
       title: "Inception",
-      duration: "148 min",
+      duration: 148,
       genre: "Sci-Fi",
       status: "Coming Soon",
     },
     {
       id: 3,
       title: "Interstellar",
-      duration: "169 min",
+      duration: 169,
       genre: "Adventure",
       status: "Now Showing",
     },
-  ];
+  ]);
+
+  // Khong lien quan
   const columnNames = ["Movie", "Duration", "Genre", "Status", "Actions"];
   const [movies, setMovies] = useState([]);
   const Genres = [
@@ -75,35 +78,67 @@ const Movies = () => {
   ];
 
   const [defaultGenres, setDefaultGenres] = useState(() => {
-    return localStorage.getItem(Genres[0].value) || Genres[0].value;
+    return localStorage.getItem("keyGenres") || Genres[0].value;
   });
 
   const [defaultFilmStatus, setDefaultFilmStatus] = useState(() => {
-    return localStorage.getItem(filmStatuses[0].value) || filmStatuses[0].value;
+    return localStorage.getItem("keyStatus") || filmStatuses[0].value;
   });
 
-  useEffect(() => {
-    filterMovies();
-  }, [defaultGenres, defaultFilmStatus]);
-
-  const filterMovies = () => {
+  const filterMovies = (data) => {
     let filtered = data;
 
     if (defaultGenres !== Genres[0].value) {
-      filtered = filtered.filter((movie) => movie.genre === defaultGenres);
+      filtered = filtered.filter((movie) => {
+        const isMatch = movie.genre === defaultGenres;
+        return isMatch;
+      });
     }
 
     if (defaultFilmStatus !== filmStatuses[0].value) {
-      filtered = filtered.filter((movie) => movie.status === defaultFilmStatus);
+      filtered = filtered.filter((movie) => {
+        return movie.status === defaultFilmStatus;
+      });
     }
-
     setMovies(filtered);
   };
+
+  useEffect(() => {
+    filterMovies(data);
+  }, [defaultGenres, defaultFilmStatus]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleAddMovie = (newMovie) => {
-    setMovies([...movies, newMovie]);
+    let updatedMovies = [
+      newMovie,
+      ...data.filter((movie) => movie.id != newMovie.id),
+    ];
+    setData(updatedMovies);
+    filterMovies(updatedMovies);
+  };
+
+  const [infoFilm, setInfoFilm] = useState({
+    title: "",
+    duration: "",
+    genre: "",
+    status: "",
+    id: Date.now(),
+  });
+  const entry = useRef({});
+  const changeEntry = (value) => {
+    entry.current = {
+      title: value[0],
+      action: value[1],
+    };
+  };
+
+  const [Delete, setDelete] = useState(false);
+  const handleDelete = (idMovie) => {
+    setDelete(!Delete);
+    const updateData = data.filter(({ id }) => id != idMovie);
+    setData(updateData);
+    filterMovies(updateData);
   };
 
   return (
@@ -116,27 +151,49 @@ const Movies = () => {
               options={Genres}
               defaultValue={defaultGenres}
               setDefault={setDefaultGenres}
+              keyStorage={"keyGenres"}
             />
             <Select
               options={filmStatuses}
               defaultValue={defaultFilmStatus}
               setDefault={setDefaultFilmStatus}
+              keyStorage={"keyStatus"}
             />
           </div>
           <button
             className="button flex items-center gap-1"
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setIsModalOpen(true);
+              changeEntry(["Add new movie", "Add"]);
+            }}
           >
             <FaPlus />
             Add movie
           </button>
         </div>
-        <TableMovie columnNames={columnNames} movies={movies} />
+        {!movies.length ? (
+          <p className="text-center font-semibold text-xl">
+            Không có bộ phim nào được tìm thấy!!!
+          </p>
+        ) : (
+          <TableMovie
+            columnNames={columnNames}
+            movies={movies}
+            setOpen={setIsModalOpen}
+            setInfoFilm={setInfoFilm}
+            changeEntry={changeEntry}
+            handleDelete={handleDelete}
+          />
+        )}
       </div>
       <AddMovieModal
+        title={entry.current.title}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAddMovie={handleAddMovie}
+        info={infoFilm}
+        setInfo={setInfoFilm}
+        Entry={entry.current.action}
       />
     </div>
   );
