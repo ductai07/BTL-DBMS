@@ -1,10 +1,10 @@
 import { FaEdit } from "react-icons/fa";
 import { MdDeleteForever } from "react-icons/md";
 
-const TableMovie = ({ columnNames, movies }) => {
+const TableRooms = ({ columnNames, rooms }) => {
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
-      <h3 className="text-lg font-semibold mb-4">Recent Transactions</h3>
+      <h3 className="text-lg font-semibold mb-4">Rooms</h3>
       <table className="w-full text-left">
         <thead>
           <tr className="text-sm text-gray-500 border-b">
@@ -16,31 +16,21 @@ const TableMovie = ({ columnNames, movies }) => {
           </tr>
         </thead>
         <tbody>
-          {movies.map((movie) => (
+          {rooms.map((room) => (
             <tr
-              key={movie.id}
+              key={room.id}
               className="border-b text-sm text-gray-700 hover:bg-gray-50"
             >
-              <td className="py-3">{movie.title}</td>
-              <td>{movie.duration}</td>
-              <td>{movie.genre}</td>
-              <td>
-                <span
-                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    movie.status === "Now Showing"
-                      ? "bg-gray-200  text-green-600"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
-                >
-                  {movie.status}
-                </span>
-              </td>
+              <td className="py-3">{room.roomName}</td>
+              <td>{room.cinema}</td>
+              <td>{room.capacity}</td>
+              <td>{room.type}</td>
               <td>
                 <span className="flex gap-2">
-                  <span>
+                  <span className="hover:cursor-pointer">
                     <FaEdit />
                   </span>
-                  <span>
+                  <span className="hover:cursor-pointer">
                     <MdDeleteForever size={16} />
                   </span>
                 </span>
@@ -53,4 +43,4 @@ const TableMovie = ({ columnNames, movies }) => {
   );
 };
 
-export default TableMovie;
+export default TableRooms;

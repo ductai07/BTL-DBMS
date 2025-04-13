@@ -5,6 +5,7 @@ import App from "./component/App.jsx";
 import { Route, Routes, BrowserRouter } from "react-router-dom";
 import DashBoard from "./pages/DashBoard.jsx";
 import Movies from "./pages/Movies.jsx";
+import Rooms from "./pages/Rooms.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -14,7 +15,7 @@ createRoot(document.getElementById("root")).render(
           <Route index element={<DashBoard />} />
           <Route path="dashboard" element={<DashBoard />} />
           <Route path="/movies" element={<Movies />} />
-          <Route path="/rooms" />
+          <Route path="/rooms" element={<Rooms />} />
           <Route path="/showtimes" />
           <Route path="/tickets" />
           <Route path="/products" />

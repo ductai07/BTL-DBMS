@@ -1,7 +1,9 @@
 const Select = ({ options, defaultValue, setDefault, keyStorage }) => {
   const handleChange = (e) => {
+    console.log(e.target.value);
     setDefault(e.target.value);
     localStorage.setItem(keyStorage, e.target.value);
+    console.log("locl", localStorage.getItem(keyStorage));
   };
   return (
     <select
