@@ -13,6 +13,7 @@ const DashBoard = () => {
     { name: "Top Gun: Maverick", revenue: 89000000 },
     { name: "Frozen II", revenue: 66000000 },
   ];
+
   return (
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
       <Header title={"Dash board"} />
@@ -23,9 +24,7 @@ const DashBoard = () => {
             <MdAttachMoney />
           </div>
           <p class="text-2xl">$24,500</p>
-          <p class="text-neutral-600 text-sm text-green-600">
-            +12.5% from last month
-          </p>
+          <p class="text-sm text-green-600">+12.5% from last month</p>
         </div>
         <div class="bg-white p-5 rounded-xl shadow-md">
           <div class="flex items-center justify-between mb-4">

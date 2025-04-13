@@ -50,7 +50,7 @@ const RecentTransactions = () => {
                 <span
                   className={`px-2 py-1 text-xs font-medium rounded-full ${
                     trx.status === "Completed"
-                      ? "bg-gray-200 text-gray-700"
+                      ? "bg-gray-200  text-green-600"
                       : "bg-yellow-100 text-yellow-800"
                   }`}
                 >
