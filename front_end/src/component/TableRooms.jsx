@@ -1,7 +1,14 @@
 import { FaEdit } from "react-icons/fa";
 import { MdDeleteForever } from "react-icons/md";
 
-const TableRooms = ({ columnNames, rooms }) => {
+const TableRooms = ({
+  columnNames,
+  rooms,
+  setOpen,
+  setInfoRoom,
+  changeEntry,
+  handleDelelte,
+}) => {
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
       <h3 className="text-lg font-semibold mb-4">Rooms</h3>
@@ -27,10 +34,20 @@ const TableRooms = ({ columnNames, rooms }) => {
               <td>{room.type}</td>
               <td>
                 <span className="flex gap-2">
-                  <span className="hover:cursor-pointer">
+                  <span
+                    className="hover:cursor-pointer"
+                    onClick={() => {
+                      setOpen(true);
+                      setInfoRoom(room);
+                      changeEntry(["Edit room", "Edit"]);
+                    }}
+                  >
                     <FaEdit />
                   </span>
-                  <span className="hover:cursor-pointer">
+                  <span
+                    className="hover:cursor-pointer"
+                    onClick={() => handleDelelte(room.id)}
+                  >
                     <MdDeleteForever size={16} />
                   </span>
                 </span>

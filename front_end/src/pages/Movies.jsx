@@ -30,6 +30,22 @@ const Movies = () => {
       status: "Now Showing",
     },
   ]);
+  // call api de upadate data
+  const handleDelete = (idMovie) => {
+    setDelete(!Delete);
+    const updateData = data.filter(({ id }) => id != idMovie);
+    setData(updateData);
+    filterMovies(updateData);
+  };
+
+  const handleAddMovie = (newMovie) => {
+    let updatedMovies = [
+      newMovie,
+      ...data.filter((movie) => movie.id != newMovie.id),
+    ];
+    setData(updatedMovies);
+    filterMovies(updatedMovies);
+  };
 
   // Khong lien quan
   const columnNames = ["Movie", "Duration", "Genre", "Status", "Actions"];
@@ -109,15 +125,6 @@ const Movies = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleAddMovie = (newMovie) => {
-    let updatedMovies = [
-      newMovie,
-      ...data.filter((movie) => movie.id != newMovie.id),
-    ];
-    setData(updatedMovies);
-    filterMovies(updatedMovies);
-  };
-
   const [infoFilm, setInfoFilm] = useState({
     title: "",
     duration: "",
@@ -134,12 +141,6 @@ const Movies = () => {
   };
 
   const [Delete, setDelete] = useState(false);
-  const handleDelete = (idMovie) => {
-    setDelete(!Delete);
-    const updateData = data.filter(({ id }) => id != idMovie);
-    setData(updateData);
-    filterMovies(updateData);
-  };
 
   return (
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">

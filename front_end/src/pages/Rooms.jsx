@@ -2,7 +2,8 @@ import Header from "../component/Header";
 import Select from "../component/Select";
 import { FaPlus } from "react-icons/fa";
 import TableRooms from "../component/TableRooms";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import AddRoom from "../component/AddRoom";
 
 const Rooms = () => {
   // Call api lay data
@@ -113,6 +114,22 @@ const Rooms = () => {
       type: "Standard",
     },
   ]);
+  // call api de update data
+  const handleAddRoom = (newRoom) => {
+    const updateRooms = [
+      newRoom,
+      ...rooms.filter((room) => room.id != newRoom.id),
+    ];
+    setRooms(updateRooms);
+    filterRooms(updateRooms);
+  };
+
+  const handleDelete = (roomId) => {
+    const updateRooms = rooms.filter((room) => room.id != roomId);
+    setRooms(updateRooms);
+    filterRooms(updateRooms);
+  };
+
   // Khong lien quan
   const Cinemas = [
     { key: "all", value: "All Cinemas" },
@@ -163,6 +180,26 @@ const Rooms = () => {
     filterRooms(rooms);
   }, [defaultCinemas, defaultRoomTypes]);
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const entry = useRef({
+    title: "",
+    action: "",
+  });
+  const changeEntry = (newEntry) => {
+    entry.current = {
+      title: newEntry[0],
+      action: newEntry[1],
+    };
+  };
+
+  const [infoRoom, setInfoRoom] = useState({
+    roomName: "",
+    cinema: "",
+    capacity: "",
+    type: "",
+    id: Date.now(),
+  });
+
   return (
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
       <Header title={"Cinema Management"} />
@@ -182,15 +219,37 @@ const Rooms = () => {
               keyStorage={"keyRoomTypes"}
             />
           </div>
-          <button className="button flex items-center gap-1">
+          <button
+            className="button flex items-center gap-1"
+            onClick={() => {
+              setIsModalOpen(true);
+              changeEntry(["Add room", "Add"]);
+            }}
+          >
             <FaPlus />
             Add Room
           </button>
         </div>
         <div>
-          <TableRooms columnNames={columnNames} rooms={listFilterRooms} />
+          <TableRooms
+            columnNames={columnNames}
+            rooms={listFilterRooms}
+            setOpen={setIsModalOpen}
+            setInfoRoom={setInfoRoom}
+            changeEntry={changeEntry}
+            handleDelelte={handleDelete}
+          />
         </div>
       </div>
+      <AddRoom
+        title={entry.current.title}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onAddRoom={handleAddRoom}
+        entry={entry.current.action}
+        infoRoom={infoRoom}
+        setInfoRoom={setInfoRoom}
+      />
     </div>
   );
 };

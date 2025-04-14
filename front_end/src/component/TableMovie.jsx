@@ -1,7 +1,14 @@
 import { FaEdit } from "react-icons/fa";
 import { MdDeleteForever } from "react-icons/md";
 
-const TableMovie = ({ columnNames, movies }) => {
+const TableMovie = ({
+  columnNames,
+  movies,
+  setOpen,
+  setInfoFilm,
+  changeEntry,
+  handleDelete,
+}) => {
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
       <h3 className="text-lg font-semibold mb-4">Recent Transactions</h3>
@@ -37,10 +44,20 @@ const TableMovie = ({ columnNames, movies }) => {
               </td>
               <td>
                 <span className="flex gap-2">
-                  <span>
+                  <span
+                    className="hover:cursor-pointer"
+                    onClick={() => {
+                      setOpen(true);
+                      changeEntry(["Edit movie", "Edit"]);
+                      setInfoFilm(movie);
+                    }}
+                  >
                     <FaEdit />
                   </span>
-                  <span>
+                  <span
+                    className="hover:cursor-pointer"
+                    onClick={() => handleDelete(movie.id)}
+                  >
                     <MdDeleteForever size={16} />
                   </span>
                 </span>
