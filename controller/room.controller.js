@@ -51,69 +51,55 @@ module.exports.index = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
-
-
 module.exports.detail = async (req, res) => {
     try {
         const id = req.params.id;
         const room = await roomModel.getRoomById(id);
-        
         if (!room || room.length === 0) {
             return res.status(404).json({ error: 'Room not found' });
         }
-        
         res.status(200).json(room[0]);
     } catch (error) {
         console.error('Error in detail:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
-
 module.exports.changeStatus = async (req, res) => {
     try {
         const id = req.params.id;
         const status = req.body.status;
-        
         // Kiểm tra status có được cung cấp không
         if (status === undefined || status === null) {
             return res.status(400).json({ error: 'Status is required' });
         }
-        
         // Kiểm tra status có hợp lệ không
         if(status !== 'active' && status !== 'inactive' && status !== 'maintenance') {
             return res.status(400).json({ error: 'Status must be either active, inactive or maintenance' });
         }
-        
         // Gọi model để cập nhật status
         const result = await roomModel.updateRoomStatus(id, status);
-        
         if (!result) {
             return res.status(404).json({ error: 'Room not found' });
         }
-        
         res.status(200).json({ message: 'Room status updated successfully' });
     } catch (error) {
         console.error('Error in changeStatus:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
-
 module.exports.create = async (req, res) => {
     try {
         const { name, type, seatCount, status, cinema_id } = req.body;
-        
         // Kiểm tra các trường bắt buộc
         if (!name || !type || !seatCount || !cinema_id) {
             return res.status(400).json({ 
                 error: 'Missing required fields: name, type, seatCount, cinema_id' 
             });
         }
-        
         // Kiểm tra seatCount có phải là số dương không
         if (isNaN(seatCount) || parseInt(seatCount) <= 0) {
             return res.status(400).json({ error: 'seatCount must be a positive number' });
         }
-        
         // Tạo đối tượng phòng mới với xử lý trường không bắt buộc
         const roomData = {
             name,
@@ -122,14 +108,11 @@ module.exports.create = async (req, res) => {
             status: status || 'active',
             cinema_id: parseInt(cinema_id)
         };
-        
         // Gọi model để tạo phòng mới
         const newRoom = await roomModel.createRoom(roomData);
-        
         if (!newRoom) {
             return res.status(400).json({ error: 'Failed to create room' });
         }
-        
         res.status(201).json({ 
             message: 'Room created successfully', 
             room: newRoom 
@@ -145,30 +128,25 @@ module.exports.create = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
-
 module.exports.edit = async (req, res) => {
     try {
         const id = req.params.id;
         const { name, type, seatCount, status, cinema_id } = req.body;
-        
         // Kiểm tra phòng có tồn tại không
         const existingRoom = await roomModel.getRoomById(id);
         if (!existingRoom || existingRoom.length === 0) {
             return res.status(404).json({ error: 'Room not found' });
         }
-        
         // Kiểm tra các trường bắt buộc
         if (!name || !type || !seatCount || !cinema_id) {
             return res.status(400).json({ 
                 error: 'Missing required fields: name, type, seatCount, cinema_id' 
             });
         }
-        
         // Kiểm tra seatCount có phải là số dương không
         if (isNaN(seatCount) || parseInt(seatCount) <= 0) {
             return res.status(400).json({ error: 'seatCount must be a positive number' });
         }
-        
         // Tạo đối tượng phòng với dữ liệu cập nhật
         const roomData = {
             name,
@@ -177,46 +155,37 @@ module.exports.edit = async (req, res) => {
             status: status || existingRoom[0].status,
             cinema_id: parseInt(cinema_id)
         };
-        
         // Gọi model để cập nhật phòng
         const updatedRoom = await roomModel.updateRoom(id, roomData);
         
         if (!updatedRoom) {
             return res.status(400).json({ error: 'Failed to update room' });
         }
-        
         res.status(200).json({ 
             message: 'Room updated successfully', 
             room: updatedRoom 
         });
     } catch (error) {
         console.error('Error in edit:', error);
-        
         // Xử lý lỗi khóa ngoại
         if (error.message.includes('FOREIGN KEY')) {
             return res.status(400).json({ error: 'Cinema ID does not exist' });
         }
-        
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
-
 module.exports.delete = async (req, res) => {
     try {
         const id = req.params.id;
-        
         // Gọi model để xóa phòng
         const deletedRoom = await roomModel.deleteRoom(id);
-        
         // Xử lý các trường hợp lỗi
         if (deletedRoom === null) {
             return res.status(404).json({ error: 'Room not found' });
         }
-        
         if (deletedRoom === false) {
             return res.status(400).json({ error: 'Failed to delete room' });
         }
-        
         // Trả về kết quả thành công
         res.status(200).json({ 
             message: 'Room deleted successfully', 
@@ -231,7 +200,6 @@ module.exports.delete = async (req, res) => {
                 error: error.message
             });
         }
-        
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }

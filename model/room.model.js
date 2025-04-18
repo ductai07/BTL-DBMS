@@ -59,14 +59,11 @@ module.exports.countRooms = async (searchKey, searchValue) => {
     try {
         const pool = await database.connect();
         const request = pool.request();
-        
         let query = 'SELECT COUNT(*) AS total FROM Room r';
         let whereConditions = [];
-        
         // Thêm điều kiện tìm kiếm nếu có searchKey và searchValue
         if (searchKey && searchValue !== undefined) {
             const validColumns = ['name', 'type', 'status'];
-            
             if (validColumns.includes(searchKey)) {
                 whereConditions.push(`r.${searchKey} LIKE @searchValue`);
                 request.input('searchValue', `%${searchValue}%`);
@@ -76,12 +73,10 @@ module.exports.countRooms = async (searchKey, searchValue) => {
                 request.input('cinemaId', parseInt(searchValue));
             }
         }
-        
         // Gộp tất cả điều kiện với WHERE
         if (whereConditions.length > 0) {
             query += ' WHERE ' + whereConditions.join(' AND ');
         }
-        
         const result = await request.query(query);
         return result.recordset[0].total;
     } catch (error) {
