@@ -1,0 +1,137 @@
+Các chức năng cần thiết cho web quản lý chuỗi rạp chiếu phim (Tham khảo)
+Dựa trên phân tích cấu trúc cơ sở dữ liệu và các truy vấn SQL mà bạn đã cung cấp, tôi đề xuất hệ thống web quản lý chuỗi rạp chiếu phim của bạn nên có các chức năng sau:
+
+1. Quản lý rạp phim và cơ sở vật chất
+; Quản lý rạp: Thêm/sửa/xóa thông tin rạp, thay đổi trạng thái hoạt động 
+Quản lý phòng chiếu: Thêm/sửa/xóa phòng, phân loại phòng (VIP, thường, 3D, 4DX...)
+Quản lý ghế ngồi: Thiết lập sơ đồ ghế, loại ghế (VIP, đôi, thường), giá ghế
+
+2. Quản lý phim
+; Thêm/sửa/xóa thông tin phim (tiêu đề, thời lượng, thể loại, đạo diễn...)
+; Upload và quản lý hình ảnh, trailer phim
+; Lọc phim theo thể loại, trạng thái, ngày phát hành
+Quản lý phim theo lịch chiếu/suất chiếu
+
+3. Quản lý lịch chiếu
+Tạo lịch chiếu mới (phim, phòng, ngày giờ)
+Lọc lịch chiếu theo khoảng thời gian, phim, loại phòng
+Thay đổi/hủy lịch chiếu
+Xem tình trạng đặt vé của từng suất chiếu
+
+4. Quản lý đặt vé và hóa đơn
+Đặt vé cho khách (chọn phim, suất chiếu, ghế)
+Quản lý hóa đơn (thanh toán, hoàn/hủy vé)
+Tích hợp các phương thức thanh toán
+Tra cứu đơn hàng theo mã, số điện thoại
+Tra cứu hóa đơn theo phim, ngày đặt, ngày chiếu
+
+5. Quản lý khách hàng
+Quản lý thông tin khách hàng (thêm/sửa/xóa/tìm kiếm)
+Chương trình thành viên/hội viên
+Lịch sử đặt vé của khách hàng
+Gửi thông báo/email marketing
+
+6. Quản lý sản phẩm và dịch vụ
+Quản lý các sản phẩm bán kèm (bắp, nước, combo...)
+Cập nhật giá, số lượng tồn kho
+Thống kê doanh thu từ sản phẩm
+
+7. Quản lý khuyến mãi
+Tạo chương trình khuyến mãi (theo thời gian, loại vé, combo...)
+Lọc danh sách khuyến mãi theo trạng thái, thời gian áp dụng
+Quản lý mã giảm giá
+Báo cáo hiệu quả chương trình khuyến mãi
+
+8. Quản lý nhân viên
+Thêm/sửa/xóa thông tin nhân viên
+Phân quyền, phân công công việc
+Theo dõi hoạt động nhân viên
+Quản lý ca làm việc
+
+9. Báo cáo và thống kê
+Báo cáo doanh thu (theo ngày/tuần/tháng/năm)
+Thống kê phim/suất chiếu có doanh thu cao nhất
+Báo cáo lượng khách theo thời gian
+Phân tích hiệu suất kinh doanh theo rạp
+Dashboard cho quản lý cấp cao
+
+10. Giao diện người dùng (dành cho khách hàng)
+Trang chủ hiển thị phim đang chiếu/sắp chiếu
+Tìm kiếm phim (theo tên, thể loại, diễn viên...)
+Xem thông tin chi tiết phim, trailer
+Đặt vé trực tuyến (chọn suất chiếu, chọn ghế, thanh toán)
+Quản lý tài khoản cá nhân và lịch sử đặt vé
+
+11. Tính năng bổ sung
+Hệ thống đánh giá phim của khách hàng
+Tích hợp QR code cho vé điện tử
+Ứng dụng mobile đồng bộ với hệ thống web
+Thông báo nhắc nhở suất chiếu qua email/SMS
+Tích hợp với mạng xã hội để chia sẻ và quảng bá
+Với những chức năng này, hệ thống quản lý chuỗi rạp chiếu phim của bạn sẽ hoạt động hiệu quả từ khâu quản lý nội bộ đến cung cấp trải nghiệm tốt cho khách hàng.
+
+
+
+2, Cấu trúc 2 (Tham khảo)
+Cơ sở dữ liệu của bạn được thiết kế để quản lý chuỗi rạp chiếu phim với nhiều thành phần liên kết chặt chẽ với nhau. Dưới đây là phân tích chi tiết:
+
+1. Quản lý rạp và cơ sở hạ tầng
+Cinema - Thông tin rạp chiếu phim
+Lưu trữ thông tin các rạp trong hệ thống
+Mỗi rạp có tên (name), địa chỉ (address), ghi chú (note) và trạng thái (status)
+Một rạp có thể có nhiều phòng chiếu
+Room - Phòng chiếu
+Mỗi phòng thuộc về một rạp (cinema_id)
+Có các thuộc tính: tên phòng, loại phòng (VIP, thường...), số lượng ghế, trạng thái
+Một phòng có thể có nhiều ghế và nhiều lịch chiếu
+Seat - Ghế ngồi
+Thuộc về một phòng chiếu cụ thể (room_id)
+Lưu thông tin về vị trí ghế, loại ghế, giá vé và trạng thái
+
+2. Quản lý phim và lịch chiếu
+Movie - Thông tin phim
+Chứa đầy đủ thông tin của một bộ phim: tiêu đề, thể loại, thời lượng, ngày phát hành...
+Thêm thông tin đa phương tiện: poster, trailer
+Thêm thông tin chi tiết: đạo diễn, diễn viên chính, nguồn gốc, ngôn ngữ, giới hạn độ tuổi
+ShowTime - Lịch chiếu
+Kết nối một bộ phim (movie_id) với một phòng chiếu (room_id)
+Xác định thời gian chiếu: ngày chiếu, giờ bắt đầu, giờ kết thúc
+Một lịch chiếu có thể có nhiều vé được bán
+
+3. Quản lý khách hàng và nhân viên
+Customer - Khách hàng
+Lưu thông tin cá nhân: họ tên, số điện thoại, email
+Lưu thông tin đăng nhập: tên đăng nhập, mật khẩu
+Khách hàng có thể có nhiều hóa đơn
+Employee - Nhân viên
+Tương tự Customer nhưng thêm thông tin vị trí công việc
+Nhân viên phục vụ khách hàng và xử lý hóa đơn
+
+4. Quản lý bán vé và hóa đơn
+Invoice - Hóa đơn
+Trung tâm của giao dịch tài chính
+Liên kết với khách hàng, nhân viên xử lý và khuyến mãi (nếu có)
+Lưu trữ thông tin thanh toán: tổng tiền, chiết khấu, phương thức thanh toán
+Một hóa đơn có thể chứa nhiều vé và sản phẩm đi kèm
+Ticket - Vé xem phim
+Liên kết với một lịch chiếu, một ghế ngồi và một hóa đơn
+Lưu thông tin: ngày đặt, giá vé và mã QR
+
+5. Quản lý sản phẩm và khuyến mãi
+Product - Sản phẩm (bắp, nước, đồ ăn...)
+Quản lý các sản phẩm phụ trợ trong rạp
+Lưu trữ tên, giá, đơn vị, số lượng tồn kho và mô tả
+ProductUsage - Chi tiết mua sản phẩm
+Liên kết Product với Invoice
+Lưu thông tin số lượng và giá mua của từng sản phẩm trong hóa đơn
+Discount - Khuyến mãi
+Quản lý các chương trình giảm giá
+Lưu thông tin: tên, loại khuyến mãi, giá trị giảm giá, thời gian áp dụng, số lượng
+Mối quan hệ quan trọng:
+Một Cinema có nhiều Room
+Một Room có nhiều Seat và nhiều ShowTime
+Một Movie có nhiều ShowTime
+Một ShowTime có nhiều Ticket
+Một Invoice có nhiều Ticket và nhiều ProductUsage
+Invoice liên kết với Customer, Employee và Discount
+Thiết kế này cho phép hệ thống quản lý toàn diện hoạt động của chuỗi rạp chiếu phim, từ thông tin cơ sở vật chất đến giao dịch bán vé và các sản phẩm đi kèm.
