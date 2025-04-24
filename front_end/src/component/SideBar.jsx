@@ -21,7 +21,7 @@ const SideBar = () => {
     { icon: <LuLayoutDashboard />, nameItem: "Dashboard", path: "/dashboard" },
     { icon: <MdOutlineLocalMovies />, nameItem: "Movies", path: "/movies" },
     { icon: <MdOutlineMeetingRoom />, nameItem: "Rooms", path: "/rooms" },
-    { icon: <IoIosTimer />, nameItem: "Showtimes", path: "/showtimes" },
+    { icon: <IoIosTimer />, nameItem: "Showtimes", path: "/showtime" },
     { icon: <IoTicketOutline />, nameItem: "Tickets", path: "/tickets" },
     {
       icon: <LiaHamburgerSolid />,
