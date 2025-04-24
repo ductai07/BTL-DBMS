@@ -1,9 +1,9 @@
 import Header from "../component/Header";
 import Select from "../component/Select";
 import { FaPlus } from "react-icons/fa";
-import TableRooms from "../component/TableRooms";
+import TableRooms from "../component/Rooms/TableRooms";
 import { useEffect, useRef, useState } from "react";
-import AddRoom from "../component/AddRoom";
+import AddRoom from "../component/Rooms/AddRoom";
 
 const Rooms = () => {
   // Call api lay data

@@ -1,9 +1,10 @@
 import Header from "../component/Header";
 import Select from "../component/Select";
 import { FaPlus } from "react-icons/fa";
-import TableMovie from "../component/TableMovie";
+import TableMovie from "../component/Movies/TableMovie";
 import { useEffect, useState, useRef } from "react";
-import AddMovieModal from "../component/AddMovieModal";
+import AddMovieModal from "../component/Movies/AddMovieModal";
+import Search from "../component/Search";
 
 const Movies = () => {
   // Call api lay data
@@ -35,7 +36,6 @@ const Movies = () => {
     setDelete(!Delete);
     const updateData = data.filter(({ id }) => id != idMovie);
     setData(updateData);
-    filterMovies(updateData);
   };
 
   const handleAddMovie = (newMovie) => {
@@ -44,12 +44,10 @@ const Movies = () => {
       ...data.filter((movie) => movie.id != newMovie.id),
     ];
     setData(updatedMovies);
-    filterMovies(updatedMovies);
   };
 
   // Khong lien quan
   const columnNames = ["Movie", "Duration", "Genre", "Status", "Actions"];
-  const [movies, setMovies] = useState([]);
   const Genres = [
     {
       key: "all",
@@ -101,28 +99,6 @@ const Movies = () => {
     return localStorage.getItem("keyStatus") || filmStatuses[0].value;
   });
 
-  const filterMovies = (data) => {
-    let filtered = data;
-
-    if (defaultGenres !== Genres[0].value) {
-      filtered = filtered.filter((movie) => {
-        const isMatch = movie.genre === defaultGenres;
-        return isMatch;
-      });
-    }
-
-    if (defaultFilmStatus !== filmStatuses[0].value) {
-      filtered = filtered.filter((movie) => {
-        return movie.status === defaultFilmStatus;
-      });
-    }
-    setMovies(filtered);
-  };
-
-  useEffect(() => {
-    filterMovies(data);
-  }, [defaultGenres, defaultFilmStatus]);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [infoFilm, setInfoFilm] = useState({
@@ -146,20 +122,40 @@ const Movies = () => {
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
       <Header title={"Movie Management"} />
       <div>
-        <div className="flex justify-between mb-6">
-          <div className="flex gap-2">
-            <Select
-              options={Genres}
-              defaultValue={defaultGenres}
-              setDefault={setDefaultGenres}
-              keyStorage={"keyGenres"}
-            />
-            <Select
-              options={filmStatuses}
-              defaultValue={defaultFilmStatus}
-              setDefault={setDefaultFilmStatus}
-              keyStorage={"keyStatus"}
-            />
+        <div className="flex justify-between mb-6 bg-white p-5 shadow-md rounded-xl">
+          <div>
+            <div className="flex gap-2 mb-3">
+              <div>
+                <div className="font-medium pb-4">Tên phim</div>
+                <Search placeholder={"Nhập tên phim"} />
+              </div>
+              <div>
+                <div className="font-medium pb-4">Trạng thái</div>
+                <Select
+                  options={Genres}
+                  defaultValue={defaultGenres}
+                  setDefault={setDefaultGenres}
+                  keyStorage={"keyGenres"}
+                />
+              </div>
+              <div>
+                <div className="font-medium pb-4">Thể loại</div>
+                <Select
+                  options={filmStatuses}
+                  defaultValue={defaultFilmStatus}
+                  setDefault={setDefaultFilmStatus}
+                  keyStorage={"keyStatus"}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div className="button !bg-white !text-black border border-black flex items-center justify-center hover:cursor-pointer">
+                Đặt lại
+              </div>
+              <div className="button flex items-center justify-center hover:cursor-pointer">
+                Tìm kiếm
+              </div>
+            </div>
           </div>
           <button
             className="button flex items-center gap-1"
@@ -172,14 +168,14 @@ const Movies = () => {
             Add movie
           </button>
         </div>
-        {!movies.length ? (
+        {!data.length ? (
           <p className="text-center font-semibold text-xl">
             Không có bộ phim nào được tìm thấy!!!
           </p>
         ) : (
           <TableMovie
             columnNames={columnNames}
-            movies={movies}
+            movies={data}
             setOpen={setIsModalOpen}
             setInfoFilm={setInfoFilm}
             changeEntry={changeEntry}
