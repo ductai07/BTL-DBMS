@@ -7,6 +7,10 @@ import DashBoard from "./pages/DashBoard.jsx";
 import Movies from "./pages/Movies.jsx";
 import Rooms from "./pages/Rooms.jsx";
 import Showtime from "./pages/Showtime.jsx";
+import Tickets from "./pages/Tickets.jsx";
+import Products from "./pages/Products.jsx";
+import Orders from "./pages/Orders.jsx";
+import Promotions from "./pages/Promotions.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -18,10 +22,10 @@ createRoot(document.getElementById("root")).render(
           <Route path="/movies" element={<Movies />} />
           <Route path="/rooms" element={<Rooms />} />
           <Route path="/showtime" element={<Showtime />} />
-          <Route path="/tickets" />
-          <Route path="/products" />
-          <Route path="/orders" />
-          <Route path="/promotions" />
+          <Route path="/tickets" element={<Tickets />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/promotions" element={<Promotions />} />
         </Route>
       </Routes>
     </BrowserRouter>
