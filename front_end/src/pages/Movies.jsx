@@ -1,9 +1,9 @@
 import Header from "../component/Header";
 import Select from "../component/Select";
 import { FaPlus } from "react-icons/fa";
-import TableMovie from "../component/Movies/TableMovie";
-import { useEffect, useState, useRef } from "react";
-import AddMovieModal from "../component/Movies/AddMovieModal";
+import TableMovie from "../component/TableMovie";
+import { useState, useRef } from "react";
+import AddMovieModal from "../component/AddMovieModal";
 import Search from "../component/Search";
 
 const Movies = () => {
@@ -117,6 +117,15 @@ const Movies = () => {
   };
 
   const [Delete, setDelete] = useState(false);
+  const [search, setSearch] = useState("");
+  const handleSearch = () => {
+    // .......
+  };
+  const handleReset = () => {
+    setSearch("");
+    setDefaultFilmStatus(filmStatuses[0].value);
+    setDefaultGenres(Genres[0].value);
+  };
 
   return (
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
@@ -127,7 +136,11 @@ const Movies = () => {
             <div className="flex gap-2 mb-3">
               <div>
                 <div className="font-medium pb-4">Tên phim</div>
-                <Search placeholder={"Nhập tên phim"} />
+                <Search
+                  placeholder={"Nhập tên phim"}
+                  setSearch={setSearch}
+                  search={search}
+                />
               </div>
               <div>
                 <div className="font-medium pb-4">Trạng thái</div>
@@ -149,10 +162,16 @@ const Movies = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <div className="button !bg-white !text-black border border-black flex items-center justify-center hover:cursor-pointer">
+              <div
+                className="button !bg-white !text-black border border-black flex items-center justify-center hover:cursor-pointer"
+                onClick={handleReset}
+              >
                 Đặt lại
               </div>
-              <div className="button flex items-center justify-center hover:cursor-pointer">
+              <div
+                className="button flex items-center justify-center hover:cursor-pointer"
+                handleSearch
+              >
                 Tìm kiếm
               </div>
             </div>

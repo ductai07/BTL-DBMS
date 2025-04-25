@@ -2,11 +2,11 @@ import Header from "../component/Header";
 import { MdAttachMoney } from "react-icons/md";
 import { IoTicketOutline } from "react-icons/io5";
 import { MdOutlineLocalMovies } from "react-icons/md";
-import Chart from "../component/DashBoard/Chart";
-import RecentTransactions from "../component/DashBoard/RecentTransactions";
-import CardStat from "../component/DashBoard/CardStat";
-import TopRevenue from "../component/DashBoard/TopRevenue";
-import NextMovies from "../component/DashBoard/NextMovies";
+import Chart from "../component/Chart";
+import RecentTransactions from "../component/RecentTransactions";
+import CardStat from "../component/CardStat";
+import TopRevenue from "../component/TopRevenue";
+import NextMovies from "../component/NextMovies";
 
 const DashBoard = () => {
   const revenueByMovies = [
