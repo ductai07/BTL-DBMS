@@ -1,39 +1,58 @@
-import React, { useState } from "react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { useState } from "react";
+import Header from "../component/Header";
+import Search from "../component/Search";
+import Select from "../component/Select";
+import Schedule from "../component/Schedule";
 
 const Showtime = () => {
-  const [selectedDate, setSelectedDate] = useState(new Date("2024-04-10"));
+  // { key: "all", value: "All Room Types" },
+  const roomOptions = [
+    { key: "all", value: "--Tất cả phòng--" },
+    { key: "room1", value: "Phòng 1" },
+    { key: "room2", value: "Phòng 2" },
+    { key: "room3", value: "Phòng 3" },
+    { ley: "VIP", value: "Phòng VIP" },
+  ];
+  const [showTimeRoom, setShowTimeRoom] = useState(() => {
+    return localStorage.getItem("showTimeRoom") || roomOptions[0].value;
+  });
 
-  const handleClear = () => {
-    setSelectedDate(null);
-  };
-
-  const handleToday = () => {
-    setSelectedDate(new Date());
-  };
-
+  const statusOptions = [
+    { key: "all", value: "--Tất cả trạng thái" },
+    { key: "coming", value: "Sắp chiếu" },
+    { key: "shown", value: "Đang chiếu" },
+    { key: "showned", value: "Đã chiếu" },
+  ];
   return (
-    <div className="p-4">
-      <DatePicker
-        selected={selectedDate}
-        onChange={(date) => setSelectedDate(date)}
-        inline
-        highlightDates={[new Date("2024-04-10")]}
-        openToDate={new Date("2024-04-10")}
-        showMonthDropdown
-        showYearDropdown
-        dropdownMode="select"
-      />
-
-      <div className="mt-4 flex justify-between">
-        <button onClick={handleClear} className="text-blue-600 hover:underline">
-          Clear
-        </button>
-
-        <button onClick={handleToday} className="text-blue-600 hover:underline">
-          Today
-        </button>
+    <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
+      <Header title={"Showtime"} />
+      <div>
+        <div>
+          <div>Tên phim</div>
+          <Search placeholder={"Nhập tên phim"} />
+        </div>
+        <div>
+          <div>Phòng chiếu</div>
+          <Select
+            options={roomOptions}
+            defaultValue={showTimeRoom}
+            setDefault={setShowTimeRoom}
+            keyStorage={"showTimeRoom"}
+          />
+        </div>
+        <div>
+          <div>Trạng thái</div>
+          <Select
+            options={statusOptions}
+            defaultValue={showTimeRoom}
+            setDefault={setShowTimeRoom}
+            keyStorage={"showTimeRoom"}
+          />
+        </div>
+        <div>
+          <div>Từ nay</div>
+          <Schedule />
+        </div>
       </div>
     </div>
   );
