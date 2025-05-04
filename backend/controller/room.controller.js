@@ -1,205 +1,522 @@
-const roomModel = require('../model/room.model');
-const paginationHelper = require('../helper/pagination');
+const Model = require('../model/associations');
+const { Op } = require('sequelize');
 
+// Lấy danh sách phòng với tìm kiếm, sắp xếp, phân trang và lọc theo rạp
 module.exports.index = async (req, res) => {
     try {
-        // Lấy tất cả tham số query
-        const { sortKey, sortValue, page = 1, limit = 10, searchKey, searchValue } = req.query;
-        // Xác thực tham số tìm kiếm
-        if (searchKey && !['name', 'type', 'status', 'cinema_id'].includes(searchKey)) {
-            return res.status(400).json({ 
-                error: 'Invalid search key. Valid options are: name, type, status, cinema_id' 
-            });
+        // Lấy các tham số từ query
+        const { SearchKey, SearchValue, SortKey, SortValue, Page, Limit, cinemaId } = req.query;
+
+        // Khởi tạo các biến mặc định
+        let where = {};
+        let order = [];
+        let page = Page ? parseInt(Page) : 1;
+        let limit = Limit ? parseInt(Limit) : 10;
+        let offset = (page - 1) * limit;
+
+        // Lọc theo rạp nếu có
+        if (cinemaId) {
+            where.cinema_id = cinemaId;
         }
-        // Xác thực tham số sắp xếp
-        if (sortKey && !['id', 'seatCount'].includes(sortKey)) {
-            return res.status(400).json({ 
-                error: 'Invalid sort key. Valid options are: id, seatCount' 
-            });
+
+        // Xử lý tìm kiếm
+        if (SearchKey && SearchValue) {
+            where = {
+                ...where,
+                [SearchKey]: {
+                    [Op.like]: `%${SearchValue}%`
+                }
+            };
         }
-        if (sortValue && !['asc', 'desc'].includes(sortValue.toLowerCase())) {
-            return res.status(400).json({ 
-                error: 'Invalid sort value. Valid options are: asc, desc' 
-            });
+
+        // Xử lý sắp xếp
+        if (SortKey && SortValue) {
+            order = [[SortKey, SortValue.toUpperCase()]];
+        } else {
+            order = [['id', 'ASC']]; // Sắp xếp mặc định
         }
-        // Xác thực tham số phân trang
-        const pageNumber = parseInt(page) || 1;
-        const limitNumber = parseInt(limit) || 10;
-        if (pageNumber < 1) {
-            return res.status(400).json({ error: 'Page must be a positive number' });
-        }
-        if (limitNumber < 1 || limitNumber > 100) {
-            return res.status(400).json({ error: 'Limit must be between 1 and 100' });
-        }
-        // Lấy tổng số bản ghi để tính phân trang
-        const count = await roomModel.countRooms(searchKey, searchValue);
-        // Sử dụng helper pagination để tính toán
-        const paginationInfo = paginationHelper(pageNumber, count, limitNumber);
-        // Gọi hàm lấy dữ liệu với pagination
-        const data = await roomModel.getRooms({
-            sortKey,
-            sortValue,
-            searchKey,
-            searchValue,
-            skip: paginationInfo.skip,
-            limit: paginationInfo.limitItems
+
+        // Thực hiện truy vấn
+        const { count, rows } = await Model.Room.findAndCountAll({
+            where,
+            order,
+            limit,
+            offset,
+            include: [
+                {
+                    model: Model.Cinema,
+                    attributes: ['id', 'name', 'address']
+                }
+            ]
         });
-        // Trả về kết quả với thông tin phân trang
-        res.status(200).json(data);
+
+        // Tính toán thông tin phân trang
+        const totalPages = Math.ceil(count / limit);
+        const hasNext = page < totalPages;
+        const hasPrevious = page > 1;
+
+        res.status(200).json({
+            data: rows,
+            pagination: {
+                total: count,
+                totalPages,
+                currentPage: page,
+                pageSize: limit,
+                hasNext,
+                hasPrevious
+            }
+        });
     } catch (error) {
-        console.error('Error in index:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({
+            message: 'Error retrieving rooms',
+            error: error.message
+        });
     }
-}
+};
+
+// Xem chi tiết phòng
 module.exports.detail = async (req, res) => {
     try {
         const id = req.params.id;
-        const room = await roomModel.getRoomById(id);
-        if (!room || room.length === 0) {
-            return res.status(404).json({ error: 'Room not found' });
+        
+        // Tìm phòng kèm thông tin rạp
+        const room = await Model.Room.findByPk(id, {
+            include: [
+                {
+                    model: Model.Cinema,
+                    attributes: ['id', 'name', 'address', 'status']
+                }
+            ]
+        });
+        
+        if (!room) {
+            return res.status(404).json({
+                message: 'Room not found'
+            });
         }
-        res.status(200).json(room[0]);
+        
+        // Đếm số ghế của phòng
+        const seatCount = await Model.Seat.count({
+            where: { room_id: id }
+        });
+        
+        // Đếm số lịch chiếu sắp tới
+        const upcomingShowtimes = await Model.ShowTime.count({
+            where: {
+                room_id: id,
+                showDate: {
+                    [Op.gte]: new Date()
+                }
+            }
+        });
+        
+        res.status(200).json({
+            data: {
+                ...room.get({ plain: true }),
+                actualSeatCount: seatCount,
+                upcomingShowtimes
+            }
+        });
     } catch (error) {
-        console.error('Error in detail:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({
+            message: 'Error retrieving room details',
+            error: error.message
+        });
     }
-}
+};
+
+// Đổi trạng thái phòng
 module.exports.changeStatus = async (req, res) => {
     try {
         const id = req.params.id;
-        const status = req.body.status;
-        // Kiểm tra status có được cung cấp không
-        if (status === undefined || status === null) {
-            return res.status(400).json({ error: 'Status is required' });
-        }
-        // Kiểm tra status có hợp lệ không
-        if(status !== 'active' && status !== 'inactive' && status !== 'maintenance') {
-            return res.status(400).json({ error: 'Status must be either active, inactive or maintenance' });
-        }
-        // Gọi model để cập nhật status
-        const result = await roomModel.updateRoomStatus(id, status);
-        if (!result) {
-            return res.status(404).json({ error: 'Room not found' });
-        }
-        res.status(200).json({ message: 'Room status updated successfully' });
-    } catch (error) {
-        console.error('Error in changeStatus:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-}
-module.exports.create = async (req, res) => {
-    try {
-        const { name, type, seatCount, status, cinema_id } = req.body;
-        // Kiểm tra các trường bắt buộc
-        if (!name || !type || !seatCount || !cinema_id) {
-            return res.status(400).json({ 
-                error: 'Missing required fields: name, type, seatCount, cinema_id' 
+        const { status } = req.body;
+
+        const room = await Model.Room.findByPk(id);
+        
+        if (!room) {
+            return res.status(404).json({
+                message: 'Room not found'
             });
         }
-        // Kiểm tra seatCount có phải là số dương không
-        if (isNaN(seatCount) || parseInt(seatCount) <= 0) {
-            return res.status(400).json({ error: 'seatCount must be a positive number' });
+
+        // Kiểm tra nếu status hợp lệ
+        const validStatus = ['Hoạt động', 'Đang bảo trì', 'Đóng cửa'];
+        if (!status || !validStatus.includes(status)) {
+            return res.status(400).json({
+                message: 'Invalid status. Must be one of: Hoạt động, Đang bảo trì, Đóng cửa'
+            });
         }
-        // Tạo đối tượng phòng mới với xử lý trường không bắt buộc
-        const roomData = {
-            name,
-            type,
-            seatCount: parseInt(seatCount),
-            status: status || 'active',
-            cinema_id: parseInt(cinema_id)
-        };
-        // Gọi model để tạo phòng mới
-        const newRoom = await roomModel.createRoom(roomData);
-        if (!newRoom) {
-            return res.status(400).json({ error: 'Failed to create room' });
+
+        // Nếu đổi sang trạng thái Đóng cửa hoặc Bảo trì, kiểm tra lịch chiếu
+        if ((status === 'Đóng cửa' || status === 'Đang bảo trì') && room.status === 'Hoạt động') {
+            // Kiểm tra xem có lịch chiếu sắp tới trong phòng này không
+            const upcomingShowtimes = await Model.ShowTime.count({
+                where: {
+                    room_id: id,
+                    showDate: { [Op.gte]: new Date() }
+                }
+            });
+            
+            if (upcomingShowtimes > 0) {
+                return res.status(400).json({
+                    message: `Cannot change status to ${status}. There are ${upcomingShowtimes} upcoming showtimes for this room.`
+                });
+            }
         }
-        res.status(201).json({ 
-            message: 'Room created successfully', 
-            room: newRoom 
+
+        // Nếu trạng thái không thay đổi
+        if (room.status === status) {
+            return res.status(200).json({
+                message: 'Status remained unchanged',
+                data: room
+            });
+        }
+
+        // Cập nhật trạng thái
+        await room.update({ status });
+
+        res.status(200).json({
+            message: 'Room status updated successfully',
+            data: room
         });
     } catch (error) {
-        console.error('Error in create:', error);
-        
-        // Xử lý lỗi khóa ngoại
-        if (error.message.includes('FOREIGN KEY')) {
-            return res.status(400).json({ error: 'Cinema ID does not exist' });
-        }
-        
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({
+            message: 'Error updating room status',
+            error: error.message
+        });
     }
-}
+};
+
+// Thêm phòng mới
+module.exports.add = async (req, res) => {
+    try {
+        const { name, type, seatCount, status, cinema_id } = req.body;
+
+        // Kiểm tra xem rạp có tồn tại không
+        const cinema = await Model.Cinema.findByPk(cinema_id);
+        if (!cinema) {
+            return res.status(400).json({
+                message: 'Cinema not found'
+            });
+        }
+
+        // Kiểm tra nếu status hợp lệ
+        const validStatus = ['Hoạt động', 'Đang bảo trì', 'Đóng cửa'];
+        if (status && !validStatus.includes(status)) {
+            return res.status(400).json({
+                message: 'Invalid status. Must be one of: Hoạt động, Đang bảo trì, Đóng cửa'
+            });
+        }
+
+        // Kiểm tra tên phòng có bị trùng trong rạp
+        const existingRoom = await Model.Room.findOne({
+            where: {
+                name,
+                cinema_id
+            }
+        });
+
+        if (existingRoom) {
+            return res.status(400).json({
+                message: 'A room with this name already exists in the cinema'
+            });
+        }
+
+        const room = await Model.Room.create({
+            name,
+            type,
+            seatCount: seatCount || 0,
+            status: status || 'Hoạt động',
+            cinema_id
+        });
+
+        res.status(201).json({
+            message: 'Room created successfully',
+            data: room
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error creating room',
+            error: error.message
+        });
+    }
+};
+
+// Sửa thông tin phòng
 module.exports.edit = async (req, res) => {
     try {
         const id = req.params.id;
         const { name, type, seatCount, status, cinema_id } = req.body;
-        // Kiểm tra phòng có tồn tại không
-        const existingRoom = await roomModel.getRoomById(id);
-        if (!existingRoom || existingRoom.length === 0) {
-            return res.status(404).json({ error: 'Room not found' });
-        }
-        // Kiểm tra các trường bắt buộc
-        if (!name || !type || !seatCount || !cinema_id) {
-            return res.status(400).json({ 
-                error: 'Missing required fields: name, type, seatCount, cinema_id' 
+
+        const room = await Model.Room.findByPk(id);
+        
+        if (!room) {
+            return res.status(404).json({
+                message: 'Room not found'
             });
         }
-        // Kiểm tra seatCount có phải là số dương không
-        if (isNaN(seatCount) || parseInt(seatCount) <= 0) {
-            return res.status(400).json({ error: 'seatCount must be a positive number' });
+
+        // Nếu thay đổi rạp, kiểm tra rạp mới có tồn tại không
+        if (cinema_id && cinema_id !== room.cinema_id) {
+            const cinema = await Model.Cinema.findByPk(cinema_id);
+            if (!cinema) {
+                return res.status(400).json({
+                    message: 'Cinema not found'
+                });
+            }
         }
-        // Tạo đối tượng phòng với dữ liệu cập nhật
-        const roomData = {
-            name,
-            type,
-            seatCount: parseInt(seatCount),
-            status: status || existingRoom[0].status,
-            cinema_id: parseInt(cinema_id)
-        };
-        // Gọi model để cập nhật phòng
-        const updatedRoom = await roomModel.updateRoom(id, roomData);
-        
-        if (!updatedRoom) {
-            return res.status(400).json({ error: 'Failed to update room' });
+
+        // Kiểm tra nếu status hợp lệ
+        const validStatus = ['Hoạt động', 'Đang bảo trì', 'Đóng cửa'];
+        if (status && !validStatus.includes(status)) {
+            return res.status(400).json({
+                message: 'Invalid status. Must be one of: Hoạt động, Đang bảo trì, Đóng cửa'
+            });
         }
-        res.status(200).json({ 
-            message: 'Room updated successfully', 
-            room: updatedRoom 
+
+        // Kiểm tra tên phòng có bị trùng trong rạp mới
+        if (name && (name !== room.name || cinema_id !== room.cinema_id)) {
+            const existingRoom = await Model.Room.findOne({
+                where: {
+                    name,
+                    cinema_id: cinema_id || room.cinema_id,
+                    id: { [Op.ne]: id } // Loại trừ phòng hiện tại
+                }
+            });
+
+            if (existingRoom) {
+                return res.status(400).json({
+                    message: 'A room with this name already exists in the cinema'
+                });
+            }
+        }
+
+        // Cập nhật thông tin
+        await room.update({
+            name: name !== undefined ? name : room.name,
+            type: type !== undefined ? type : room.type,
+            seatCount: seatCount !== undefined ? seatCount : room.seatCount,
+            status: status !== undefined ? status : room.status,
+            cinema_id: cinema_id !== undefined ? cinema_id : room.cinema_id
+        });
+
+        res.status(200).json({
+            message: 'Room updated successfully',
+            data: room
         });
     } catch (error) {
-        console.error('Error in edit:', error);
-        // Xử lý lỗi khóa ngoại
-        if (error.message.includes('FOREIGN KEY')) {
-            return res.status(400).json({ error: 'Cinema ID does not exist' });
-        }
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({
+            message: 'Error updating room',
+            error: error.message
+        });
     }
-}
+};
+
+// Xóa phòng
 module.exports.delete = async (req, res) => {
     try {
         const id = req.params.id;
-        // Gọi model để xóa phòng
-        const deletedRoom = await roomModel.deleteRoom(id);
-        // Xử lý các trường hợp lỗi
-        if (deletedRoom === null) {
-            return res.status(404).json({ error: 'Room not found' });
-        }
-        if (deletedRoom === false) {
-            return res.status(400).json({ error: 'Failed to delete room' });
-        }
-        // Trả về kết quả thành công
-        res.status(200).json({ 
-            message: 'Room deleted successfully', 
-            room: deletedRoom 
-        });
-    } catch (error) {
-        console.error('Error in delete:', error);
+        const room = await Model.Room.findByPk(id);
         
-        // Xử lý lỗi ràng buộc khóa ngoại
-        if (error.message.includes('referenced by other records')) {
-            return res.status(400).json({ 
-                error: error.message
+        if (!room) {
+            return res.status(404).json({
+                message: 'Room not found'
             });
         }
-        res.status(500).json({ error: 'Internal Server Error' });
+
+        // Kiểm tra xem phòng có lịch chiếu không
+        const showtimeCount = await Model.ShowTime.count({
+            where: { room_id: id }
+        });
+
+        if (showtimeCount > 0) {
+            return res.status(400).json({
+                message: 'Cannot delete room with existing showtimes',
+                showtimeCount
+            });
+        }
+
+        await room.destroy();
+
+        res.status(200).json({
+            message: 'Room deleted successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error deleting room',
+            error: error.message
+        });
     }
-}
+};
+
+// Lấy danh sách ghế trong phòng
+module.exports.getSeats = async (req, res) => {
+    try {
+        const roomId = req.params.id;
+        const { SearchKey, SearchValue, SortKey, SortValue, Page, Limit } = req.query;
+        
+        // Kiểm tra phòng có tồn tại không
+        const room = await Model.Room.findByPk(roomId);
+        
+        if (!room) {
+            return res.status(404).json({
+                message: 'Room not found'
+            });
+        }
+        
+        // Khởi tạo các biến mặc định
+        let where = { room_id: roomId };
+        let order = [];
+        let page = Page ? parseInt(Page) : 1;
+        let limit = Limit ? parseInt(Limit) : 50; // Thường số ghế trong phòng nhiều nên mặc định lấy 50
+        let offset = (page - 1) * limit;
+        
+        // Xử lý tìm kiếm
+        if (SearchKey && SearchValue) {
+            where = {
+                ...where,
+                [SearchKey]: {
+                    [Op.like]: `%${SearchValue}%`
+                }
+            };
+        }
+        
+        // Xử lý sắp xếp
+        if (SortKey && SortValue) {
+            order = [[SortKey, SortValue.toUpperCase()]];
+        } else {
+            order = [['position', 'ASC']]; // Sắp xếp theo vị trí ghế mặc định
+        }
+        
+        // Thực hiện truy vấn
+        const { count, rows } = await Model.Seat.findAndCountAll({
+            where,
+            order,
+            limit,
+            offset
+        });
+        
+        // Tính toán thông tin phân trang
+        const totalPages = Math.ceil(count / limit);
+        const hasNext = page < totalPages;
+        const hasPrevious = page > 1;
+        
+        res.status(200).json({
+            data: {
+                room: {
+                    id: room.id,
+                    name: room.name,
+                    type: room.type
+                },
+                seats: rows
+            },
+            pagination: {
+                total: count,
+                totalPages,
+                currentPage: page,
+                pageSize: limit,
+                hasNext,
+                hasPrevious
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error retrieving seats',
+            error: error.message
+        });
+    }
+};
+
+// Lấy lịch chiếu của phòng
+module.exports.getShowtimes = async (req, res) => {
+    try {
+        const roomId = req.params.id;
+        const { startDate, endDate, movieId, Page, Limit } = req.query;
+        
+        // Kiểm tra phòng có tồn tại không
+        const room = await Model.Room.findByPk(roomId);
+        
+        if (!room) {
+            return res.status(404).json({
+                message: 'Room not found'
+            });
+        }
+        
+        // Khởi tạo các biến mặc định
+        let where = { room_id: roomId };
+        let page = Page ? parseInt(Page) : 1;
+        let limit = Limit ? parseInt(Limit) : 10;
+        let offset = (page - 1) * limit;
+        
+        // Lọc theo khoảng thời gian
+        if (startDate && endDate) {
+            where.showDate = {
+                [Op.between]: [startDate, endDate]
+            };
+        } else if (startDate) {
+            where.showDate = {
+                [Op.gte]: startDate
+            };
+        } else if (endDate) {
+            where.showDate = {
+                [Op.lte]: endDate
+            };
+        } else {
+            // Mặc định lấy từ hôm nay trở đi
+            where.showDate = {
+                [Op.gte]: new Date()
+            };
+        }
+        
+        // Lọc theo phim nếu có
+        if (movieId) {
+            where.movie_id = movieId;
+        }
+        
+        // Thực hiện truy vấn
+        const { count, rows } = await Model.ShowTime.findAndCountAll({
+            where,
+            order: [
+                ['showDate', 'ASC'],
+                ['startTime', 'ASC']
+            ],
+            limit,
+            offset,
+            include: [
+                {
+                    model: Model.Movie,
+                    attributes: ['id', 'title', 'duration', 'poster', 'genre']
+                }
+            ]
+        });
+        
+        // Tính toán thông tin phân trang
+        const totalPages = Math.ceil(count / limit);
+        const hasNext = page < totalPages;
+        const hasPrevious = page > 1;
+        
+        res.status(200).json({
+            data: {
+                room: {
+                    id: room.id,
+                    name: room.name,
+                    cinema_id: room.cinema_id
+                },
+                showtimes: rows
+            },
+            pagination: {
+                total: count,
+                totalPages,
+                currentPage: page,
+                pageSize: limit,
+                hasNext,
+                hasPrevious
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error retrieving showtimes',
+            error: error.message
+        });
+    }
+};

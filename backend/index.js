@@ -1,16 +1,13 @@
-const express= require('express');
-const app=express();
-const port=3000;
+const express = require('express');
+const app = express();
+const port = 3000;
+sequelize = require('./config/database');
+const router = require('./router/index.router');
 
-// Thêm middleware để xử lý JSON
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const RouterV1=require('./api/v1/routers/index.router');
-
-
-
-RouterV1(app);
-app.listen(port,()=>{
-    console.log(`Server is running on http://localhost:${port}`);
-})
+router(app);
+app.listen(port, () => {
+  console.log(`Server is running at http://localhost:${port}`);
+});

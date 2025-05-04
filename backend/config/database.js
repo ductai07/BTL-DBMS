@@ -1,15 +1,27 @@
-const sql = require('mssql/msnodesqlv8');
-const config = {
-    connectionString: 'Driver={ODBC Driver 17 for SQL Server};Server=LMQ\\SQLEXPRESS;Database=QLRapChieuPhim;Trusted_Connection=Yes;',
-    driver: 'msnodesqlv8'
-};
-module.exports.connect = async () => {
-    try {
-        let pool = await sql.connect(config);
-        console.log('Connected to database successfully');
-        return pool;
-    } catch (error) {
-        console.error('Database connection failed:', error);
-        throw error;
+const { Sequelize } = require('sequelize');
+const sequelize = new Sequelize('LMQ', 'sa', '2411', {
+  dialect: 'mssql',
+  host: 'localhost',
+  dialectOptions: {
+    options: {
+      instanceName: 'SQLEXPRESS',
+      trustServerCertificate: true,
+      encrypt: false,
+      requestTimeout: 30000
     }
-}
+  },
+  logging: console.log
+});
+
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log('Kết nối thành công đến SQL Server.');
+  })
+  .catch((err) => {
+    console.error('Chi tiết lỗi kết nối:', err);
+    console.error('Message:', err.message);
+    console.error('Original error:', err.original);
+  });
+
+module.exports = sequelize;

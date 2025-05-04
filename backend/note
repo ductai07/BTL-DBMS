@@ -1,0 +1,82 @@
+Tổng Hợp API Rạp Chiếu Phim
+1. Quản lý Rạp (6 API)
+Lấy danh sách rạp: http://localhost:3000/cinema
+Xem chi tiết rạp: http://localhost:3000/cinema/detail/:id
+Thêm rạp mới: http://localhost:3000/cinema/add
+Sửa thông tin rạp: http://localhost:3000/cinema/edit/:id
+Xóa rạp: http://localhost:3000/cinema/delete/:id
+Thay đổi trạng thái rạp: http://localhost:3000/cinema/change-status/:id
+Lấy phòng theo rạp: http://localhost:3000/cinema/room?cinemaId=:id
+2. Quản lý Phòng (8 API)
+Lấy danh sách phòng: http://localhost:3000/room
+Xem chi tiết phòng: http://localhost:3000/room/detail/:id
+Thêm phòng mới: http://localhost:3000/room/add
+Sửa thông tin phòng: http://localhost:3000/room/edit/:id
+Xóa phòng: http://localhost:3000/room/delete/:id
+Thay đổi trạng thái phòng: http://localhost:3000/room/change-status/:id
+Lấy ghế trong phòng: http://localhost:3000/room/seats/:id
+Lấy lịch chiếu của phòng: http://localhost:3000/room/showtimes/:id
+3. Quản lý Ghế (6 API)
+Lấy danh sách ghế: http://localhost:3000/seat
+Xem chi tiết ghế: http://localhost:3000/seat/detail/:id
+Thêm ghế mới: http://localhost:3000/seat/add
+Sửa thông tin ghế: http://localhost:3000/seat/edit/:id
+Xóa ghế: http://localhost:3000/seat/delete/:id
+Thay đổi trạng thái ghế: http://localhost:3000/seat/change-status/:id
+Kiểm tra tình trạng ghế theo lịch chiếu: http://localhost:3000/seat/by-showtime/:showtimeId
+4. Quản lý Phim (6 API)
+Lấy danh sách phim: http://localhost:3000/movie
+Xem chi tiết phim: http://localhost:3000/movie/detail/:id
+Thêm phim mới: http://localhost:3000/movie/add
+Sửa thông tin phim: http://localhost:3000/movie/edit/:id
+Xóa phim: http://localhost:3000/movie/delete/:id
+Lấy lịch chiếu của phim: http://localhost:3000/movie/showtimes/:id
+5. Quản lý Lịch chiếu (6 API)
+Lấy danh sách lịch chiếu: http://localhost:3000/showtime
+Xem chi tiết lịch chiếu: http://localhost:3000/showtime/detail/:id
+Thêm lịch chiếu mới: http://localhost:3000/showtime/add
+Sửa thông tin lịch chiếu: http://localhost:3000/showtime/edit/:id
+Xóa lịch chiếu: http://localhost:3000/showtime/delete/:id
+Lấy vé đã bán theo lịch chiếu: http://localhost:3000/showtime/tickets/:id
+6. Quản lý Khách hàng (5 API)
+Lấy danh sách khách hàng: http://localhost:3000/customer
+Xem chi tiết khách hàng: http://localhost:3000/customer/detail/:id
+Thêm khách hàng mới: http://localhost:3000/customer/add
+Cập nhật thông tin khách hàng: http://localhost:3000/customer/update/:id
+Xóa khách hàng: http://localhost:3000/customer/delete/:id
+7. Quản lý Nhân viên (5 API)
+Lấy danh sách nhân viên: http://localhost:3000/employee
+Xem chi tiết nhân viên: http://localhost:3000/employee/detail/:id
+Thêm nhân viên mới: http://localhost:3000/employee/add
+Cập nhật thông tin nhân viên: http://localhost:3000/employee/update/:id
+Xóa nhân viên: http://localhost:3000/employee/delete/:id
+8. Quản lý Khuyến mãi (5 API)
+Lấy danh sách khuyến mãi: http://localhost:3000/discount
+Xem chi tiết khuyến mãi: http://localhost:3000/discount/detail/:id
+Thêm khuyến mãi mới: http://localhost:3000/discount/add
+Sửa thông tin khuyến mãi: http://localhost:3000/discount/edit/:id
+Xóa khuyến mãi: http://localhost:3000/discount/delete/:id
+9. Quản lý Sản phẩm (5 API)
+Lấy danh sách sản phẩm: http://localhost:3000/product
+Xem chi tiết sản phẩm: http://localhost:3000/product/detail/:id
+Thêm sản phẩm mới: http://localhost:3000/product/add
+Sửa thông tin sản phẩm: http://localhost:3000/product/edit/:id
+Xóa sản phẩm: http://localhost:3000/product/delete/:id
+10. Quản lý Hóa đơn và Vé (13 API)
+Hóa đơn
+Lấy danh sách hóa đơn: http://localhost:3000/invoice
+Xem chi tiết hóa đơn: http://localhost:3000/invoice/detail/:id
+Tạo hóa đơn mới: http://localhost:3000/invoice/create
+Thêm vé vào hóa đơn: http://localhost:3000/invoice/:id/ticket
+Xóa vé khỏi hóa đơn: http://localhost:3000/invoice/:id/ticket/:ticketId
+Thêm sản phẩm vào hóa đơn: http://localhost:3000/invoice/:id/product
+Xóa sản phẩm khỏi hóa đơn: http://localhost:3000/invoice/:id/product/:productUsageId
+Thanh toán hóa đơn: http://localhost:3000/invoice/payment/:id
+Vé
+Lấy danh sách vé: http://localhost:3000/ticket
+Xem chi tiết vé: http://localhost:3000/ticket/detail/:id
+Thêm vé mới: http://localhost:3000/ticket/add
+Hủy vé: http://localhost:3000/ticket/cancel/:id
+Lấy vé theo lịch chiếu: http://localhost:3000/ticket/by-showtime/:showtimeId
+
+Lưu ý mấy cái trả về danh sách lúc nào cũng có phân trang , tìm kiếm , sắp xếp , chi tiết xem bên postman

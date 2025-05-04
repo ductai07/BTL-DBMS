@@ -1,0 +1,24 @@
+const cinemaRouter = require('./cinema.router');
+const roomRouter = require('./room.router');
+const seatRouter = require('./seat.router');
+const movieRouter = require('./movie.router');
+const showtimeRouter = require('./showtime.router');
+const discountRouter = require('./discount.router');
+const productRouter = require('./product.router');
+const customerRouter = require('./customer.router');
+const employeeRouter = require('./employee.router');
+const invoiceRouter = require('./invoice.router');
+const ticketRouter = require('./ticket.router');
+module.exports = (app) => {
+    app.use('/cinema', cinemaRouter);
+    app.use('/room', roomRouter);
+    app.use('/seat', seatRouter);
+    app.use('/movie', movieRouter);
+    app.use('/showtime', showtimeRouter);
+    app.use('/discount', discountRouter);
+    app.use('/product', productRouter);
+    app.use('/customer', customerRouter);
+    app.use('/employee', employeeRouter);
+    app.use('/invoice', invoiceRouter);
+    app.use('/ticket', ticketRouter);
+};
