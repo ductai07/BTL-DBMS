@@ -11,7 +11,7 @@ import {
 
 const Chart = ({ title, data }) => {
   return (
-    <div className="overflow-hidden">
+    <div className="bg-white flex-1 shadow-md p-5 rounded-lg overflow-hidden">
       <h3>{title}</h3>
       <ResponsiveContainer width="100%" height={250}>
         <BarChart

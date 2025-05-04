@@ -1,9 +1,10 @@
 import Header from "../component/Header";
 import Select from "../component/Select";
 import { FaPlus } from "react-icons/fa";
-import TableRooms from "../component/TableRooms";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import AddRoom from "../component/AddRoom";
+import TableRooms from "../component/TableRooms";
+import Search from "../component/Search";
 
 const Rooms = () => {
   // Call api lay data
@@ -159,26 +160,8 @@ const Rooms = () => {
     () => localStorage.getItem("keyCinemas") || Cinemas[0].value
   );
   const [defaultRoomTypes, setDefaultRoomTypes] = useState(
-    () => localStorage.getItem("keyRoomTypes") || rooms[0].value
+    () => localStorage.getItem("keyRoomTypes") || roomsTypes[0].value
   );
-
-  const [listFilterRooms, setListFilterRooms] = useState([]);
-
-  const filterRooms = (data) => {
-    let filted = data;
-    if (defaultCinemas != Cinemas[0].value) {
-      filted = filted.filter((room) => room.cinema === defaultCinemas);
-    }
-    if (defaultRoomTypes != roomsTypes[0].value) {
-      filted = filted.filter((room) => room.type === defaultRoomTypes);
-    }
-
-    setListFilterRooms(filted);
-  };
-
-  useEffect(() => {
-    filterRooms(rooms);
-  }, [defaultCinemas, defaultRoomTypes]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const entry = useRef({
@@ -200,25 +183,63 @@ const Rooms = () => {
     id: Date.now(),
   });
 
+  const [search, setSearch] = useState("");
+  const handleReset = () => {
+    setSearch("");
+    setDefaultCinemas(Cinemas[0].value);
+    setDefaultRoomTypes(roomsTypes[0].value);
+  };
+
   return (
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
       <Header title={"Cinema Management"} />
       <div>
-        <div className="flex justify-between mb-6">
-          <div className="flex gap-2">
-            <Select
-              options={Cinemas}
-              defaultValue={defaultCinemas}
-              setDefault={setDefaultCinemas}
-              keyStorage={"keyCinemas"}
-            />
-            <Select
-              options={roomsTypes}
-              defaultValue={defaultRoomTypes}
-              setDefault={setDefaultRoomTypes}
-              keyStorage={"keyRoomTypes"}
-            />
+        <div className="flex justify-between mb-6  bg-white p-5 shadow-md rounded-xl">
+          <div>
+            <div className="flex gap-2 mb-4">
+              <div>
+                <div className="font-medium pb-4">Mã phòng</div>
+                <Search
+                  placeholder={"Nhập tên phòng"}
+                  setSearch={setSearch}
+                  search={search}
+                />
+              </div>
+              <div>
+                <div className="font-medium pb-4">Loại phòng</div>
+                <Select
+                  options={Cinemas}
+                  defaultValue={defaultCinemas}
+                  setDefault={setDefaultCinemas}
+                  keyStorage={"keyCinemas"}
+                />
+              </div>
+              <div>
+                <div className="font-medium pb-4">Loại phòng</div>
+                <Select
+                  options={roomsTypes}
+                  defaultValue={defaultRoomTypes}
+                  setDefault={setDefaultRoomTypes}
+                  keyStorage={"keyRoomTypes"}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div
+                className="button !bg-white !text-black border border-black flex items-center justify-center hover:cursor-pointer"
+                onClick={handleReset}
+              >
+                Đặt lại
+              </div>
+              <div
+                className="button flex items-center justify-center hover:cursor-pointer"
+                handleSearch
+              >
+                Tìm kiếm
+              </div>
+            </div>
           </div>
+
           <button
             className="button flex items-center gap-1"
             onClick={() => {
@@ -233,7 +254,7 @@ const Rooms = () => {
         <div>
           <TableRooms
             columnNames={columnNames}
-            rooms={listFilterRooms}
+            rooms={rooms}
             setOpen={setIsModalOpen}
             setInfoRoom={setInfoRoom}
             changeEntry={changeEntry}
