@@ -2,24 +2,39 @@ import { useState } from "react";
 import { FaEdit } from "react-icons/fa";
 import { MdDeleteForever } from "react-icons/md";
 
-const TableRooms = ({
-  columnNames,
-  rooms,
+const TabelShowTime = ({
+  showTimes,
   setOpen,
-  setInfoRoom,
+  setInfoShowTime,
   changeEntry,
   handleDelete,
 }) => {
+  const columnNames = [
+    "Tên phim",
+    "Phòng chiếu",
+    "Ngày",
+    "Giờ",
+    "Trạng thái",
+    "Số vé đã bán",
+    "Thao tác",
+  ];
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(rooms.length / itemsPerPage);
+  const totalPages = Math.ceil(showTimes.length / itemsPerPage);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentItems = rooms.slice(startIndex, startIndex + itemsPerPage);
+  const currentItems = showTimes.slice(startIndex, startIndex + itemsPerPage);
+
+  const formatDate = (isoDateStr) => {
+    if (!isoDateStr) return "";
+    const [year, month, day] = isoDateStr.split("-");
+    return `${day}/${month}/${year}`;
+  };
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
-      <h3 className="text-lg font-semibold mb-4">Rooms</h3>
+      <h3 className="text-lg font-semibold mb-4">Recent Transactions</h3>
       <table className="w-full text-left">
         <thead>
           <tr className="text-sm text-gray-500 border-b">
@@ -31,30 +46,48 @@ const TableRooms = ({
           </tr>
         </thead>
         <tbody>
-          {currentItems.map((room) => (
+          {currentItems.map((show) => (
             <tr
-              key={room.id}
+              key={show.id}
               className="border-b text-sm text-gray-700 hover:bg-gray-50"
             >
-              <td className="py-3">{room.roomName}</td>
-              <td>{room.cinema}</td>
-              <td>{room.capacity}</td>
-              <td>{room.type}</td>
+              <td className="py-3">{show.title}</td>
+              <td>{show.room}</td>
+              <td>{show.date}</td>
+              <td>{show.time}</td>
+              <td>
+                <span
+                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    show.status === "Sắp chiếu"
+                      ? "bg-blue-100 text-blue-600"
+                      : show.status === "Đang chiếu"
+                      ? "bg-green-100 text-green-600"
+                      : show.status === "Đã chiếu"
+                      ? "bg-gray-200 text-gray-600"
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}
+                >
+                  {show.status}
+                </span>
+              </td>
+              <td>
+                {show.tickets["sold"]}/{show.tickets["total"]}
+              </td>
               <td>
                 <span className="flex gap-2">
                   <span
                     className="hover:cursor-pointer"
                     onClick={() => {
                       setOpen(true);
-                      setInfoRoom(room);
-                      changeEntry(["Edit room", "Edit"]);
+                      changeEntry(["Chỉnh sửa xuất chiếu", "Edit"]);
+                      setInfoShowTime(show);
                     }}
                   >
                     <FaEdit />
                   </span>
                   <span
                     className="hover:cursor-pointer"
-                    onClick={() => handleDelete(room.id)}
+                    onClick={() => handleDelete(show.id)}
                   >
                     <MdDeleteForever size={16} />
                   </span>
@@ -65,7 +98,7 @@ const TableRooms = ({
         </tbody>
       </table>
 
-      {/* Pagination Controls */}
+      {/* Pagination */}
       <div className="flex justify-between items-center mt-4 text-sm">
         <span>
           Trang {currentPage} / {totalPages}
@@ -91,4 +124,4 @@ const TableRooms = ({
   );
 };
 
-export default TableRooms;
+export default TabelShowTime;

@@ -11,9 +11,9 @@ const TableTickets = ({
   handleDelete,
 }) => {
   const ticketStatusColor = {
-    "Booked": "bg-blue-100 text-blue-800",
-    "Paid": "bg-green-100 text-green-800",
-    "Canceled": "bg-red-100 text-red-800"
+    Booked: "bg-blue-100 text-blue-800",
+    Paid: "bg-green-100 text-green-800",
+    Canceled: "bg-red-100 text-red-800",
   };
 
   return (
@@ -22,10 +22,7 @@ const TableTickets = ({
         <thead>
           <tr className="text-sm font-medium text-gray-700 border-b border-gray-200">
             {columnNames.map((name, index) => (
-              <th
-                key={index}
-                className="px-4 py-4 text-center"
-              >
+              <th key={index} className="px-4 py-4 text-center">
                 {name}
               </th>
             ))}
@@ -42,9 +39,15 @@ const TableTickets = ({
               <td className="px-4 py-4 text-center">{ticket.seatNumber}</td>
               <td className="px-4 py-4 text-center">{ticket.showDate}</td>
               <td className="px-4 py-4 text-center">{ticket.showTime}</td>
-              <td className="px-4 py-4 text-center">{formatCurrency(ticket.price)}</td>
               <td className="px-4 py-4 text-center">
-                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${ticketStatusColor[ticket.status]}`}>
+                {formatCurrency(ticket.price)}
+              </td>
+              <td className="px-4 py-4 text-center">
+                <span
+                  className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                    ticketStatusColor[ticket.status]
+                  }`}
+                >
                   {ticket.status}
                 </span>
               </td>
