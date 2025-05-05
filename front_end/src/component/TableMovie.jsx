@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { FaEdit } from "react-icons/fa";
 import { MdDeleteForever } from "react-icons/md";
 
@@ -9,6 +10,13 @@ const TableMovie = ({
   changeEntry,
   handleDelete,
 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(movies.length / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentItems = movies.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
       <h3 className="text-lg font-semibold mb-4">Recent Transactions</h3>
@@ -23,7 +31,7 @@ const TableMovie = ({
           </tr>
         </thead>
         <tbody>
-          {movies.map((movie) => (
+          {currentItems.map((movie) => (
             <tr
               key={movie.id}
               className="border-b text-sm text-gray-700 hover:bg-gray-50"
@@ -35,7 +43,7 @@ const TableMovie = ({
                 <span
                   className={`px-2 py-1 text-xs font-medium rounded-full ${
                     movie.status === "Now Showing"
-                      ? "bg-gray-200  text-green-600"
+                      ? "bg-gray-200 text-green-600"
                       : "bg-yellow-100 text-yellow-800"
                   }`}
                 >
@@ -66,6 +74,29 @@ const TableMovie = ({
           ))}
         </tbody>
       </table>
+
+      {/* Pagination */}
+      <div className="flex justify-between items-center mt-4 text-sm">
+        <span>
+          Trang {currentPage} / {totalPages}
+        </span>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-1 border rounded disabled:opacity-50"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => prev - 1)}
+          >
+            Trước
+          </button>
+          <button
+            className="px-3 py-1 border rounded disabled:opacity-50"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+          >
+            Sau
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
