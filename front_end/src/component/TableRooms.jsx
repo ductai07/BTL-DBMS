@@ -9,14 +9,10 @@ const TableRooms = ({
   setInfoRoom,
   changeEntry,
   handleDelete,
+  currentPage,
+  setCurrentPage,
+  totalPages,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(rooms.length / itemsPerPage);
-
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentItems = rooms.slice(startIndex, startIndex + itemsPerPage);
-
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
       <h3 className="text-lg font-semibold mb-4">Rooms</h3>
@@ -31,15 +27,16 @@ const TableRooms = ({
           </tr>
         </thead>
         <tbody>
-          {currentItems.map((room) => (
+          {rooms.map((room) => (
             <tr
               key={room.id}
               className="border-b text-sm text-gray-700 hover:bg-gray-50"
             >
-              <td className="py-3">{room.roomName}</td>
-              <td>{room.cinema}</td>
-              <td>{room.capacity}</td>
+              <td className="py-3">{room.name}</td>
+              <td>{room.Cinema.name}</td>
+              <td>{room.seatCount}</td>
               <td>{room.type}</td>
+              <td>{room.status}</td>
               <td>
                 <span className="flex gap-2">
                   <span

@@ -1,4 +1,14 @@
 const { Sequelize } = require('sequelize');
+// <<<<<<< DieuPham
+// const sequelize = new Sequelize('LMQ2', 'sa', '2411', {
+//   dialect: 'mssql',
+//   host: 'CHINHPHAM',
+//   dialectOptions: {
+//     options: {
+//       instanceName: 'SQLEXPRESS',
+//       encrypt: true,
+//       trustServerCertificate: true, // Phù hợp cho môi trường phát triển
+// =======
 
 const sequelize = new Sequelize({
   dialect: 'mssql',
@@ -21,13 +31,12 @@ const sequelize = new Sequelize({
   },
   logging: console.log
 });
-
 sequelize
   .authenticate()
   .then(() => {
     console.log('Kết nối thành công đến SQL Server.');
   })
-  .catch((err) => {
+  .catch((err) => { 
     console.error('Chi tiết lỗi kết nối:', err);
     console.error('Message:', err.message);
     console.error('Original error:', err.original);

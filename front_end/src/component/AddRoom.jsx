@@ -5,42 +5,81 @@ const AddRoom = ({
   isOpen,
   onClose,
   onAddRoom,
+  onEditRoom,
   entry,
   infoRoom,
   setInfoRoom,
 }) => {
   const [room, setRoom] = useState({
-    roomName: "",
-    cinema: "",
-    capacity: "",
+    name: "",
+    Cinema: {
+      id: "",
+      name: "",
+      address: "",
+    },
+    seatCount: "",
     type: "",
+    status: "", // ✅ Thêm trường status
     id: Date.now(),
   });
+
   useEffect(() => {
     setRoom(infoRoom);
   }, [infoRoom]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onAddRoom(room);
+    entry === "Add" ? onAddRoom(room) : onEditRoom(room);
     handleCloseWindow();
   };
 
   const handleCloseWindow = () => {
     onClose();
     setInfoRoom({
-      roomName: "",
-      cinema: "",
-      capacity: "",
+      name: "",
+      Cinema: {
+        id: "",
+        name: "",
+        address: "",
+      },
+      seatCount: "",
       type: "",
+      status: "", // ✅ Thêm lại trong reset state
       id: Date.now(),
     });
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setRoom({ ...room, [name]: value });
+
+    if (name === "Cinema") {
+      const selectedCinema = cinemaOptions.find(
+        (cinema) => cinema.name === value
+      );
+      setRoom((prevRoom) => ({
+        ...prevRoom,
+        Cinema: selectedCinema,
+      }));
+    } else {
+      setRoom((prevRoom) => ({
+        ...prevRoom,
+        [name]: value,
+      }));
+    }
   };
+
+  const cinemaOptions = [
+    { id: 1, name: "Galaxy Nguyễn Du" },
+    { id: 2, name: "BHD Star Vincom Thảo Điền" },
+    { id: 3, name: "Star Cinema Mall" },
+    { id: 4, name: "CGV Crescent Mall" },
+  ];
+
+  const roomTypeOptions = [
+    { id: "standard", name: "Standard" },
+    { id: "vip", name: "Vip" },
+    { id: "imax", name: "IMAX" },
+  ];
 
   if (!isOpen) return null;
 
@@ -61,35 +100,34 @@ const AddRoom = ({
             type="text"
             placeholder="Name room"
             required
-            value={room.roomName}
+            value={room.name}
             onChange={handleChange}
-            name="roomName"
+            name="name"
           />
           <input
             className="w-full border p-2 rounded"
             type="number"
             placeholder="Capacity"
             required
-            value={room.capacity}
+            value={room.seatCount}
             onChange={handleChange}
-            name="capacity"
+            name="seatCount"
           />
           <select
-            value={room.cinema}
+            value={room.Cinema.name}
             className="w-full border p-2 rounded"
             onChange={handleChange}
-            name="cinema"
+            name="Cinema"
             required
           >
             <option value="">--Chọn Cinema--</option>
-            <option value="Cinema City Downtown">Cinema City Downtown</option>
-            <option value="Megaplex Central">Megaplex Central</option>
-            <option value="Star Cinema Mall">Star Cinema Mall</option>
-            <option value="Luxury Cinemas">Luxury Cinemas</option>
-            <option value="Downtown Cinemas">Downtown Cinemas</option>
-            <option value="Galaxy Cineplex">Galaxy Cineplex</option>
-            <option value="Cinema City North">Cinema City North</option>
+            {cinemaOptions.map((cinema) => (
+              <option key={cinema.id} value={cinema.name}>
+                {cinema.name}
+              </option>
+            ))}
           </select>
+
           <select
             value={room.type}
             required
@@ -98,10 +136,26 @@ const AddRoom = ({
             name="type"
           >
             <option value="">--Chọn loại phòng--</option>
-            <option value="Standard">Standard</option>
-            <option value="Vip">Vip</option>
-            <option value="IMAX">IMAX</option>
+            {roomTypeOptions.map((type) => (
+              <option key={type.id} value={type.name}>
+                {type.name}
+              </option>
+            ))}
           </select>
+
+          {/* ✅ Select cho status */}
+          <select
+            value={room.status}
+            required
+            className="w-full border p-2 rounded"
+            onChange={handleChange}
+            name="status"
+          >
+            <option value="">--Chọn trạng thái--</option>
+            <option value="Hoạt động">Hoạt động</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+
           <div className="flex justify-end gap-2">
             <button
               type="button"

@@ -1,10 +1,14 @@
 const express = require('express');
+const cors = require('cors'); 
 const app = express();
 const port = 3000;
 const sequelize = require('./config/database');
 const models = require('./model/associations'); // Import all models with associations
 const router = require('./router/index.router');
 
+// <<<<<<< DieuPham
+// app.use(cors());
+=======
 // Middleware để xử lý CORS
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
