@@ -49,7 +49,7 @@ module.exports.index = async (req, res) => {
         if (SortKey && SortValue) {
             order = [[SortKey, SortValue.toUpperCase()]];
         } else {
-            order = [['bookingDate', 'DESC']]; // Mặc định là thời gian đặt giảm dần
+            order = [['bookingDate', 'DESC']]; // Sắp xếp mặc định theo ngày đặt mới nhất
         }
 
         // Thực hiện truy vấn
@@ -61,7 +61,7 @@ module.exports.index = async (req, res) => {
             include: [
                 {
                     model: Model.ShowTime,
-                    attributes: ['id', 'showDate', 'startTime', 'endTime'],
+                    attributes: ['id', 'startTime', 'showDate', 'movie_id', 'room_id'],
                     include: [
                         {
                             model: Model.Movie,
@@ -69,7 +69,7 @@ module.exports.index = async (req, res) => {
                         },
                         {
                             model: Model.Room,
-                            attributes: ['id', 'name'],
+                            attributes: ['id', 'name', 'cinema_id'],
                             include: [
                                 {
                                     model: Model.Cinema,
@@ -81,11 +81,11 @@ module.exports.index = async (req, res) => {
                 },
                 {
                     model: Model.Seat,
-                    attributes: ['id', 'position', 'type', 'price']
+                    attributes: ['id', 'position', 'type', 'room_id']
                 },
                 {
                     model: Model.Invoice,
-                    attributes: ['id', 'status', 'createDate']
+                    attributes: ['id', 'status', 'createDate', 'customer_id']
                 }
             ]
         });
@@ -95,8 +95,33 @@ module.exports.index = async (req, res) => {
         const hasNext = page < totalPages;
         const hasPrevious = page > 1;
 
+        // Format dữ liệu để gửi về client
+        const formattedTickets = rows.map(ticket => {
+            const data = ticket.get({ plain: true });
+            return {
+                id: data.id,
+                movieTitle: data.ShowTime?.Movie?.title || 'Không xác định',
+                roomName: data.ShowTime?.Room?.name || 'Không xác định',
+                cinemaName: data.ShowTime?.Room?.Cinema?.name || 'Không xác định',
+                seatNumber: data.Seat?.position || 'Không xác định',
+                showDate: data.ShowTime?.showDate || null,
+                showTime: data.ShowTime?.startTime || null,
+                price: data.price || 0,
+                status: data.Invoice?.status || 'Chưa thanh toán',
+                bookingDate: data.bookingDate,
+                // Thông tin chi tiết khác
+                movieId: data.ShowTime?.Movie?.id || null,
+                roomId: data.ShowTime?.Room?.id || null,
+                cinemaId: data.ShowTime?.Room?.Cinema?.id || null,
+                seatId: data.Seat?.id || null,
+                showtimeId: data.showtime_id,
+                invoiceId: data.invoice_id,
+                qrCode: data.qrCode
+            };
+        });
+
         res.status(200).json({
-            data: rows,
+            data: formattedTickets,
             pagination: {
                 total: count,
                 totalPages,
@@ -119,16 +144,15 @@ module.exports.detail = async (req, res) => {
     try {
         const id = req.params.id;
         
-        // Lấy thông tin vé
         const ticket = await Model.Ticket.findByPk(id, {
             include: [
                 {
                     model: Model.ShowTime,
-                    attributes: ['id', 'showDate', 'startTime', 'endTime'],
+                    attributes: ['id', 'startTime', 'endTime', 'showDate'],
                     include: [
                         {
                             model: Model.Movie,
-                            attributes: ['id', 'title', 'duration', 'poster', 'genre']
+                            attributes: ['id', 'title', 'poster', 'duration']
                         },
                         {
                             model: Model.Room,
@@ -144,19 +168,15 @@ module.exports.detail = async (req, res) => {
                 },
                 {
                     model: Model.Seat,
-                    attributes: ['id', 'position', 'type', 'price']
+                    attributes: ['id', 'position', 'type']
                 },
                 {
                     model: Model.Invoice,
-                    attributes: ['id', 'createDate', 'status', 'paymentMethod', 'totalAmount'],
+                    attributes: ['id', 'totalAmount', 'status', 'createDate', 'customer_id'],
                     include: [
                         {
                             model: Model.Customer,
-                            attributes: ['id', 'fullName', 'phoneNumber']
-                        },
-                        {
-                            model: Model.Employee,
-                            attributes: ['id', 'fullName']
+                            attributes: ['id', 'fullName', 'phoneNumber', 'email']
                         }
                     ]
                 }
@@ -165,7 +185,7 @@ module.exports.detail = async (req, res) => {
         
         if (!ticket) {
             return res.status(404).json({
-                message: 'Vé không tồn tại'
+                message: 'Không tìm thấy vé'
             });
         }
         
@@ -180,134 +200,71 @@ module.exports.detail = async (req, res) => {
     }
 };
 
-// Thêm vé mới (không liên kết với hóa đơn)
+// Thêm vé mới
 module.exports.add = async (req, res) => {
     try {
         const { showtime_id, seat_id, price, invoice_id } = req.body;
 
-        // Kiểm tra các trường bắt buộc
+        // Kiểm tra tham số bắt buộc
         if (!showtime_id || !seat_id) {
             return res.status(400).json({
-                message: 'Lịch chiếu và ghế là bắt buộc'
+                message: 'Thiếu thông tin lịch chiếu hoặc ghế ngồi'
             });
         }
 
-        // Kiểm tra lịch chiếu
-        const showtime = await Model.ShowTime.findByPk(showtime_id);
-        if (!showtime) {
-            return res.status(400).json({
-                message: 'Lịch chiếu không tồn tại'
-            });
-        }
-
-        // Kiểm tra ghế
-        const seat = await Model.Seat.findByPk(seat_id);
-        if (!seat) {
-            return res.status(400).json({
-                message: 'Ghế không tồn tại'
-            });
-        }
-
-        // Kiểm tra ghế có thuộc phòng của lịch chiếu không
-        if (seat.room_id !== showtime.room_id) {
-            return res.status(400).json({
-                message: 'Ghế không thuộc phòng của lịch chiếu này'
-            });
-        }
-
-        // Kiểm tra ghế đã được đặt chưa
-        if (seat.status === 'Đã đặt') {
-            return res.status(400).json({
-                message: 'Ghế đã được đặt, vui lòng chọn ghế khác'
-            });
-        }
-
-        if (seat.status === 'Bảo trì') {
-            return res.status(400).json({
-                message: 'Ghế đang bảo trì, không thể đặt'
-            });
-        }
-
-        // Kiểm tra hóa đơn nếu có
-        if (invoice_id) {
-            const invoice = await Model.Invoice.findByPk(invoice_id);
-            if (!invoice) {
-                return res.status(400).json({
-                    message: 'Hóa đơn không tồn tại'
-                });
+        // Kiểm tra xem ghế đã được đặt trong lịch chiếu này chưa
+        const existingTicket = await Model.Ticket.findOne({
+            where: {
+                showtime_id,
+                seat_id
             }
+        });
 
-            if (invoice.status !== 'Chưa thanh toán') {
-                return res.status(400).json({
-                    message: `Không thể thêm vé vào hóa đơn có trạng thái "${invoice.status}"`
-                });
-            }
+        if (existingTicket) {
+            return res.status(400).json({
+                message: 'Ghế này đã được đặt cho lịch chiếu đã chọn'
+            });
         }
 
-        // Lấy giá ghế nếu không được chỉ định
-        const ticketPrice = price || seat.price;
-        
-        try {
-            // Sử dụng raw query để thêm vé, tránh lỗi với trigger trg_ManageTicketAndSeat
-            const result = await sequelize.query(`
-                INSERT INTO Ticket (
-                    bookingDate, 
-                    price, 
-                    showtime_id, 
-                    seat_id, 
-                    invoice_id
-                )
-                OUTPUT INSERTED.id
-                VALUES (
-                    GETDATE(), 
-                    ${ticketPrice}, 
-                    ${showtime_id}, 
-                    ${seat_id}, 
-                    ${invoice_id || null}
-                )
-            `, { type: sequelize.QueryTypes.INSERT });
-            
-            const ticketId = result[0][0].id;
-            
-            // Cập nhật trạng thái ghế thành "Đã đặt"
-            await sequelize.query(`
-                UPDATE Seat 
-                SET status = N'Đã đặt' 
-                WHERE id = ${seat_id}
-            `, { type: sequelize.QueryTypes.UPDATE });
-            
-            // Lấy thông tin vé vừa tạo
-            const newTicket = await Model.Ticket.findByPk(ticketId, {
-                include: [
-                    {
-                        model: Model.ShowTime,
-                        attributes: ['id', 'showDate', 'startTime'],
-                        include: [{ 
-                            model: Model.Movie, 
-                            attributes: ['id', 'title'] 
-                        }]
-                    },
-                    {
-                        model: Model.Seat,
-                        attributes: ['id', 'position', 'type']
-                    }
-                ]
-            });
-            
-            res.status(201).json({
-                message: 'Tạo vé thành công',
-                data: newTicket
-            });
-        } catch (error) {
-            // Xử lý lỗi từ trigger
-            if (error.message.includes('Không thể đặt các ghế')) {
-                return res.status(400).json({
-                    message: 'Ghế đã được đặt, vui lòng chọn ghế khác',
-                    detail: error.message
-                });
-            }
-            throw error;
-        }
+        // Tạo vé mới
+        const newTicket = await Model.Ticket.create({
+            showtime_id,
+            seat_id,
+            price: price || 0,
+            invoice_id,
+            bookingDate: new Date(),
+            qrCode: `TICKET-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+        });
+
+        // Lấy thông tin vé vừa tạo kèm các thông tin liên quan
+        const ticket = await Model.Ticket.findByPk(newTicket.id, {
+            include: [
+                {
+                    model: Model.ShowTime,
+                    include: [
+                        {
+                            model: Model.Movie
+                        },
+                        {
+                            model: Model.Room,
+                            include: [
+                                {
+                                    model: Model.Cinema
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    model: Model.Seat
+                }
+            ]
+        });
+
+        res.status(201).json({
+            message: 'Tạo vé thành công',
+            data: ticket
+        });
     } catch (error) {
         res.status(500).json({
             message: 'Lỗi khi tạo vé',
@@ -316,128 +273,135 @@ module.exports.add = async (req, res) => {
     }
 };
 
-// Hủy vé
-module.exports.cancel = async (req, res) => {
+// Cập nhật vé
+module.exports.edit = async (req, res) => {
     try {
         const id = req.params.id;
-        
-        // Kiểm tra vé tồn tại
-        const ticket = await Model.Ticket.findByPk(id, {
-            include: [
-                { model: Model.Invoice },
-                { model: Model.Seat }
-            ]
-        });
+        const { showtime_id, seat_id, price, invoice_id } = req.body;
+
+        const ticket = await Model.Ticket.findByPk(id);
         
         if (!ticket) {
             return res.status(404).json({
-                message: 'Vé không tồn tại'
+                message: 'Không tìm thấy vé'
             });
         }
-        
-        // Kiểm tra vé thuộc hóa đơn đã thanh toán không được hủy
-        if (ticket.Invoice && ticket.Invoice.status === 'Đã thanh toán') {
-            return res.status(400).json({
-                message: 'Không thể hủy vé đã thanh toán'
+
+        // Nếu thay đổi lịch chiếu và ghế, kiểm tra xem đã có vé nào cho cặp này chưa
+        if ((showtime_id && showtime_id !== ticket.showtime_id) || 
+            (seat_id && seat_id !== ticket.seat_id)) {
+            
+            const existingTicket = await Model.Ticket.findOne({
+                where: {
+                    showtime_id: showtime_id || ticket.showtime_id,
+                    seat_id: seat_id || ticket.seat_id,
+                    id: { [Op.ne]: id } // Loại trừ vé hiện tại
+                }
             });
-        }
-        
-        // Lưu lại seat_id trước khi xóa vé
-        const seatId = ticket.seat_id;
-        const invoiceId = ticket.invoice_id;
-        
-        // Sử dụng raw query để xóa vé, tránh lỗi với trigger
-        await sequelize.query(`
-            DELETE FROM Ticket WHERE id = ${id}
-        `, { type: sequelize.QueryTypes.DELETE });
-        
-        // Cập nhật trạng thái ghế thành "Trống"
-        await sequelize.query(`
-            UPDATE Seat SET status = N'Trống' WHERE id = ${seatId}
-        `, { type: sequelize.QueryTypes.UPDATE });
-        
-        // Lấy thông tin hóa đơn đã cập nhật nếu có
-        let updatedInvoice = null;
-        if (invoiceId) {
-            updatedInvoice = await Model.Invoice.findByPk(invoiceId, {
-                attributes: ['id', 'totalAmount', 'totalDiscount']
-            });
-        }
-        
-        res.status(200).json({
-            message: 'Hủy vé thành công',
-            data: {
-                invoice: updatedInvoice
+
+            if (existingTicket) {
+                return res.status(400).json({
+                    message: 'Ghế này đã được đặt cho lịch chiếu đã chọn'
+                });
             }
+        }
+
+        // Cập nhật thông tin vé
+        await ticket.update({
+            showtime_id: showtime_id !== undefined ? showtime_id : ticket.showtime_id,
+            seat_id: seat_id !== undefined ? seat_id : ticket.seat_id,
+            price: price !== undefined ? price : ticket.price,
+            invoice_id: invoice_id !== undefined ? invoice_id : ticket.invoice_id
+        });
+
+        // Lấy thông tin vé kèm các thông tin liên quan
+        const updatedTicket = await Model.Ticket.findByPk(id, {
+            include: [
+                {
+                    model: Model.ShowTime,
+                    include: [
+                        {
+                            model: Model.Movie
+                        },
+                        {
+                            model: Model.Room,
+                            include: [
+                                {
+                                    model: Model.Cinema
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    model: Model.Seat
+                }
+            ]
+        });
+
+        res.status(200).json({
+            message: 'Cập nhật vé thành công',
+            data: updatedTicket
         });
     } catch (error) {
         res.status(500).json({
-            message: 'Lỗi khi hủy vé',
+            message: 'Lỗi khi cập nhật vé',
             error: error.message
         });
     }
 };
 
-// Lấy vé theo lịch chiếu
-module.exports.getByShowtime = async (req, res) => {
+// Xóa vé
+module.exports.delete = async (req, res) => {
     try {
-        const showtimeId = req.params.showtimeId;
-        const { Page, Limit } = req.query;
-
-        // Kiểm tra lịch chiếu có tồn tại không
-        const showtime = await Model.ShowTime.findByPk(showtimeId);
-        if (!showtime) {
+        const id = req.params.id;
+        const ticket = await Model.Ticket.findByPk(id);
+        
+        if (!ticket) {
             return res.status(404).json({
-                message: 'Lịch chiếu không tồn tại'
+                message: 'Không tìm thấy vé'
             });
         }
 
-        // Khởi tạo các biến phân trang
-        let page = Page ? parseInt(Page) : 1;
-        let limit = Limit ? parseInt(Limit) : 20; // Mặc định hiển thị 20 vé
-        let offset = (page - 1) * limit;
+        await ticket.destroy();
 
-        // Thực hiện truy vấn
-        const { count, rows } = await Model.Ticket.findAndCountAll({
+        res.status(200).json({
+            message: 'Xóa vé thành công'
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Lỗi khi xóa vé',
+            error: error.message
+        });
+    }
+};
+
+// Lấy danh sách vé theo lịch chiếu
+module.exports.getTicketsByShowtime = async (req, res) => {
+    try {
+        const showtimeId = req.params.showtimeId;
+        
+        // Kiểm tra lịch chiếu
+        const showtime = await Model.ShowTime.findByPk(showtimeId);
+        if (!showtime) {
+            return res.status(404).json({
+                message: 'Không tìm thấy lịch chiếu'
+            });
+        }
+        
+        // Lấy tất cả vé của lịch chiếu này
+        const tickets = await Model.Ticket.findAll({
             where: { showtime_id: showtimeId },
             include: [
                 {
                     model: Model.Seat,
-                    attributes: ['id', 'position', 'type', 'price']
-                },
-                {
-                    model: Model.Invoice,
-                    attributes: ['id', 'status', 'createDate']
+                    attributes: ['id', 'position', 'type']
                 }
-            ],
-            limit,
-            offset,
-            order: [['id', 'ASC']]
+            ]
         });
-
-        // Tính toán thông tin phân trang
-        const totalPages = Math.ceil(count / limit);
-        const hasNext = page < totalPages;
-        const hasPrevious = page > 1;
-
+        
         res.status(200).json({
-            data: {
-                showtime: {
-                    id: showtime.id,
-                    showDate: showtime.showDate,
-                    startTime: showtime.startTime,
-                    endTime: showtime.endTime
-                },
-                tickets: rows
-            },
-            pagination: {
-                total: count,
-                totalPages,
-                currentPage: page,
-                pageSize: limit,
-                hasNext,
-                hasPrevious
-            }
+            data: tickets
         });
     } catch (error) {
         res.status(500).json({

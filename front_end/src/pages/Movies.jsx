@@ -106,8 +106,6 @@ const Movies = () => {
   });
 
   const handleSearch = () => {
-    queryRef.current.SearchKey = "title";
-    queryRef.current.SearchValue = search;
     queryRef.current.Page = currentPage;
     const queryString = new URLSearchParams(queryRef.current).toString();
     fetch(`http://localhost:3000/movie?${queryString}`)
@@ -191,6 +189,7 @@ const Movies = () => {
   const [search, setSearch] = useState("");
 
   const handleReset = () => {
+    queryRef.current.SearchValue = "";
     setSearch("");
     setDefaultFilmStatus(filmStatuses[0].value);
     setDefaultGenres(Genres[0].value);
@@ -200,7 +199,8 @@ const Movies = () => {
   const [currentPage, setCurrentPage] = useState(1);
   useEffect(() => {
     handleSearch();
-  }, [currentPage, search]);
+    console.log("defaultGenres", queryRef.current.SearchValue);
+  }, [currentPage, search, defaultGenres, defaultFilmStatus]);
 
   return (
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
@@ -215,6 +215,7 @@ const Movies = () => {
                   placeholder={"Nhập tên phim"}
                   setSearch={setSearch}
                   search={search}
+                  queryRef={queryRef}
                 />
               </div>
               <div>
@@ -224,6 +225,8 @@ const Movies = () => {
                   defaultValue={defaultGenres}
                   setDefault={setDefaultGenres}
                   keyStorage={"keyGenres"}
+                  queryRef={queryRef}
+                  keySearch={"genre"}
                 />
               </div>
               <div>
@@ -233,6 +236,8 @@ const Movies = () => {
                   defaultValue={defaultFilmStatus}
                   setDefault={setDefaultFilmStatus}
                   keyStorage={"keyStatus"}
+                  queryRef={queryRef}
+                  keySearch={"status"}
                 />
               </div>
             </div>
@@ -243,12 +248,12 @@ const Movies = () => {
               >
                 Đặt lại
               </div>
-              <div
+              {/* <div
                 className="button flex items-center justify-center hover:cursor-pointer"
                 onClick={handleSearch}
               >
                 Tìm kiếm
-              </div>
+              </div> */}
             </div>
           </div>
           <button

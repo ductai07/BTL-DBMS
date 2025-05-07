@@ -1,203 +1,213 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { IoClose } from "react-icons/io5";
+import { formatCurrency } from "../utils/formatUtils";
 
-const AddProductModal = ({
-  title,
-  isOpen,
-  onClose,
-  onAddProduct,
-  info,
-  setInfo,
-  Entry,
-}) => {
-  // Reset form when modal closes
+const AddProductModal = ({ isOpen, onClose, onSave, product, title }) => {
+  const [productData, setProductData] = useState({
+    name: "",
+    price: "",
+    quantity: "",
+    unit: "Cái",
+    description: "",
+    image: ""
+  });
+  
+  // Update form when product prop changes
   useEffect(() => {
-    if (!isOpen) {
-      setInfo({
+    if (product && isOpen) {
+      setProductData({
+        id: product.id,
+        name: product.name || "",
+        price: product.price || "",
+        quantity: product.quantity || "",
+        unit: product.unit || "Cái",
+        description: product.description || "",
+        image: product.image || "",
+        originalData: product.originalData || product
+      });
+    } else if (isOpen) {
+      // Reset form when opened for new product
+      setProductData({
         name: "",
-        category: "",
         price: "",
-        stock: "",
-        status: "",
-        isCombo: false,
-        image: "",
-        id: Date.now(),
+        quantity: "",
+        unit: "Cái",
+        description: "",
+        image: ""
       });
     }
-  }, [isOpen, setInfo]);
-
+  }, [product, isOpen]);
+  
   const handleChange = (e) => {
-    const value = 
-      e.target.type === "checkbox" 
-        ? e.target.checked 
-        : e.target.value;
-    
-    setInfo({ ...info, [e.target.name]: value });
+    const { name, value } = e.target;
+    setProductData({
+      ...productData,
+      [name]: name === "price" || name === "quantity" ? parseFloat(value) || "" : value
+    });
   };
-
+  
   const handleSubmit = (e) => {
     e.preventDefault();
-    onAddProduct({
-      ...info,
-      id: info.id || Date.now(),
-    });
-    onClose();
+    onSave(productData);
   };
-
+  
   if (!isOpen) return null;
-
+  
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg w-[500px] max-w-[95%]">
-        <div className="flex justify-between items-center border-b px-5 py-3">
-          <h3 className="font-semibold text-lg">{title}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg w-full max-w-md p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">{title}</h2>
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
             <IoClose size={24} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-5">
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              Tên sản phẩm
+            </label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              required
+              value={productData.name}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Nhập tên sản phẩm"
+            />
+          </div>
+          
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="block text-gray-700 text-sm font-medium mb-1">
-                Product Name
+            <div>
+              <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                Giá
               </label>
               <input
-                type="text"
-                name="name"
-                value={info.name}
-                onChange={handleChange}
-                placeholder="e.g. Bắp rang bơ lớn"
-                className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-1">
-                Category
-              </label>
-              <select
-                name="category"
-                value={info.category}
-                onChange={handleChange}
-                className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                required
-              >
-                <option value="">Select Category</option>
-                <option value="Popcorn">Popcorn</option>
-                <option value="Drink">Drink</option>
-                <option value="Snack">Snack</option>
-                <option value="Combo">Combo</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-1">
-                Price (VND)
-              </label>
-              <input
-                type="number"
+                id="price"
                 name="price"
-                value={info.price}
-                onChange={handleChange}
-                placeholder="e.g. 65000"
-                className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-1">
-                Stock Quantity
-              </label>
-              <input
                 type="number"
-                name="stock"
-                value={info.stock}
-                onChange={handleChange}
-                placeholder="e.g. 100"
-                className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+                min="0"
+                step="1000"
                 required
+                value={productData.price}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="VNĐ"
               />
             </div>
-
+            
             <div>
-              <label className="block text-gray-700 text-sm font-medium mb-1">
-                Status
-              </label>
-              <select
-                name="status"
-                value={info.status}
-                onChange={handleChange}
-                className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                required
-              >
-                <option value="">Select Status</option>
-                <option value="Available">Available</option>
-                <option value="Low Stock">Low Stock</option>
-                <option value="Out of Stock">Out of Stock</option>
-              </select>
-            </div>
-
-            <div className="col-span-2">
-              <label className="block text-gray-700 text-sm font-medium mb-1">
-                Image URL
+              <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
+                Số lượng
               </label>
               <input
-                type="text"
-                name="image"
-                value={info.image}
-                onChange={handleChange}
-                placeholder="https://example.com/image.png"
-                className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+                id="quantity"
+                name="quantity"
+                type="number"
+                min="0"
                 required
+                value={productData.quantity}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0"
               />
-            </div>
-
-            <div className="col-span-2">
-              <label className="flex items-center gap-2 text-gray-700">
-                <input
-                  type="checkbox"
-                  name="isCombo"
-                  checked={info.isCombo}
-                  onChange={handleChange}
-                  className="rounded text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm font-medium">This is a combo product</span>
-              </label>
-              <p className="text-xs text-gray-500 mt-1">
-                Check this box if this product is a combination of multiple items
-              </p>
             </div>
           </div>
-
-          {info.image && (
-            <div className="mt-4 flex justify-center">
-              <img
-                src={info.image}
-                alt="Product Preview"
-                className="h-40 object-contain rounded border border-gray-200"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://placehold.co/200x200?text=Image+Error";
-                }}
-              />
+          
+          <div>
+            <label htmlFor="unit" className="block text-sm font-medium text-gray-700 mb-1">
+              Đơn vị
+            </label>
+            <select
+              id="unit"
+              name="unit"
+              required
+              value={productData.unit}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="Cái">Cái</option>
+              <option value="Hộp">Hộp</option>
+              <option value="Chai">Chai</option>
+              <option value="Lon">Lon</option>
+              <option value="Túi">Túi</option>
+            </select>
+          </div>
+          
+          <div>
+            <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
+              URL hình ảnh
+            </label>
+            <input
+              id="image"
+              name="image"
+              type="text"
+              value={productData.image}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://example.com/image.jpg"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              Mô tả
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              rows="3"
+              value={productData.description}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Mô tả sản phẩm"
+            ></textarea>
+          </div>
+          
+          {/* Preview of product */}
+          <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+            <p className="text-sm font-medium mb-1">Xem trước:</p>
+            <div className="flex gap-2">
+              {productData.image && (
+                <img 
+                  src={productData.image} 
+                  alt={productData.name} 
+                  className="w-16 h-16 object-cover rounded"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://placehold.co/300x300?text=No+Image";
+                  }}
+                />
+              )}
+              <div>
+                <p className="font-medium">{productData.name || "Tên sản phẩm"}</p>
+                <p className="text-sm text-gray-500">{formatCurrency(productData.price || 0)}</p>
+                <p className="text-xs text-gray-500">
+                  {productData.quantity || 0} {productData.unit}
+                </p>
+              </div>
             </div>
-          )}
-
-          <div className="mt-6 flex justify-end">
+          </div>
+          
+          <div className="flex justify-end gap-3 pt-3">
             <button
               type="button"
               onClick={onClose}
-              className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400 mr-2"
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
             >
-              Cancel
+              Hủy
             </button>
             <button
               type="submit"
-              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
-              {Entry}
+              {product ? "Lưu" : "Thêm"}
             </button>
           </div>
         </form>

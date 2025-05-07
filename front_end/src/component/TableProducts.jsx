@@ -1,101 +1,107 @@
-import { BiSolidPencil } from "react-icons/bi";
-import { MdDelete } from "react-icons/md";
+import React from "react";
+import { FaEdit } from "react-icons/fa";
+import { MdDeleteForever } from "react-icons/md";
 import { formatCurrency } from "../utils/formatUtils";
 
 const TableProducts = ({
   columnNames,
   products,
   setOpen,
-  setProductInfo,
+  setInfoProduct,
   changeEntry,
   handleDelete,
 }) => {
-  const productStatusColor = {
-    "Available": "bg-green-100 text-green-800",
-    "Low Stock": "bg-yellow-100 text-yellow-800",
-    "Out of Stock": "bg-red-100 text-red-800"
+  // Get status class for coloring
+  const getStatusClass = (status) => {
+    switch (status) {
+      case "Còn hàng":
+        return "bg-green-100 text-green-800";
+      case "Hết hàng":
+        return "bg-red-100 text-red-800";
+      case "Sắp hết":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
-      <table className="w-full table-auto">
+    <div className="bg-white p-6 rounded-xl shadow-md overflow-x-auto">
+      <h3 className="text-lg font-semibold mb-4">Danh sách sản phẩm</h3>
+      <table className="w-full text-left">
         <thead>
-          <tr className="text-sm font-medium text-gray-700 border-b border-gray-200 bg-gray-50">
-            {columnNames.map((name, index) => (
-              <th
-                key={index}
-                className="px-4 py-4 text-center"
-              >
-                {name}
+          <tr className="text-sm text-gray-500 border-b">
+            {columnNames.map((col) => (
+              <th key={col} className="py-2 px-4">
+                {col}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {products.map((product) => (
-            <tr
-              key={product.id}
-              className="text-sm text-gray-700 border-b border-gray-200 hover:bg-gray-50 transition-colors"
-            >
-              <td className="px-4 py-4 text-center">
-                <div className="flex justify-center">
-                  <img 
-                    src={product.image} 
-                    alt={product.name} 
-                    className="w-16 h-16 object-contain rounded"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = "https://placehold.co/100x100?text=No+Image";
-                    }}
-                  />
-                </div>
-              </td>
-              <td className="px-4 py-4 text-left">
-                <div>
-                  <p className="font-medium text-gray-800">{product.name}</p>
-                  {product.isCombo && <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full mt-1 inline-block">Combo</span>}
-                </div>
-              </td>
-              <td className="px-4 py-4 text-center">{product.category}</td>
-              <td className="px-4 py-4 text-center font-medium text-green-700">{formatCurrency(product.price)}</td>
-              <td className="px-4 py-4 text-center">
-                {product.stock === 0 ? (
-                  <span className="text-red-600 font-medium">{product.stock}</span>
-                ) : product.stock <= 10 ? (
-                  <span className="text-yellow-600 font-medium">{product.stock}</span>
-                ) : (
-                  <span>{product.stock}</span>
-                )}
-              </td>
-              <td className="px-4 py-4 text-center">
-                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${productStatusColor[product.status]}`}>
-                  {product.status}
-                </span>
-              </td>
-              <td className="px-4 py-4 text-center">
-                <div className="flex items-center justify-center space-x-2">
-                  <button
-                    className="p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
-                    onClick={() => {
-                      changeEntry(["Edit product", "Edit"]);
-                      setProductInfo(product);
-                      setOpen(true);
-                    }}
+          {products.length > 0 ? (
+            products.map((product) => (
+              <tr
+                key={product.id}
+                className="border-b text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <td className="py-3 px-4">
+                  <div className="flex items-center">
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="h-10 w-10 rounded object-cover mr-2"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded bg-gray-200 mr-2 flex items-center justify-center text-xs">
+                        No img
+                      </div>
+                    )}
+                    {product.name}
+                  </div>
+                </td>
+                <td className="py-3 px-4">{product.category}</td>
+                <td className="py-3 px-4">{formatCurrency(product.price)}</td>
+                <td className="py-3 px-4">{product.quantity}</td>
+                <td className="py-3 px-4">
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(
+                      product.status
+                    )}`}
                   >
-                    <BiSolidPencil />
-                  </button>
-                  <button
-                    className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                    onClick={() => {
-                      handleDelete(product.id);
-                    }}
-                  >
-                    <MdDelete />
-                  </button>
-                </div>
+                    {product.status}
+                  </span>
+                </td>
+                <td className="py-3 px-4">
+                  <span className="flex gap-2">
+                    <span
+                      className="hover:cursor-pointer hover:text-blue-600"
+                      onClick={() => {
+                        setOpen(true);
+                        changeEntry(["Edit product", "Save"]);
+                        setInfoProduct(product);
+                      }}
+                    >
+                      <FaEdit />
+                    </span>
+                    <span
+                      className="hover:cursor-pointer hover:text-red-600"
+                      onClick={() => handleDelete(product.id)}
+                    >
+                      <MdDeleteForever size={16} />
+                    </span>
+                  </span>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={columnNames.length} className="py-4 text-center text-gray-500">
+                No products found
               </td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
     </div>

@@ -20,4 +20,13 @@ router.delete('/delete/:id', Controller.delete);
 // Lấy vé đã bán theo lịch chiếu
 router.get('/tickets/:id', Controller.getTickets);
 
+// Lấy danh sách ghế theo lịch chiếu (để hiển thị sơ đồ ghế)
+router.get('/:id/seats', Controller.getSeats);
+
+// Lấy thông tin phim và phòng của lịch chiếu
+router.get('/:id/info', Controller.getInfo);
+
+// Lấy danh sách các ngày chiếu
+router.get('/dates', Controller.getDates);
+
 module.exports = router;

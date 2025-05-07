@@ -1,80 +1,103 @@
-import { BiSolidPencil } from "react-icons/bi";
-import { MdDelete } from "react-icons/md";
-import { formatCurrency } from "../utils/formatUtils";
+import { BsPencil } from "react-icons/bs";
+import { MdOutlineDelete } from "react-icons/md";
 
-const TableTickets = ({
-  columnNames,
-  tickets,
-  setOpen,
-  setTicketInfo,
-  changeEntry,
+const TableTickets = ({ 
+  columnNames, 
+  tickets = [], // Provide a default empty array
+  setOpen, 
+  setInfoTicket, 
+  changeEntry, 
   handleDelete,
+  formatCurrency
 }) => {
-  const ticketStatusColor = {
-    Booked: "bg-blue-100 text-blue-800",
-    Paid: "bg-green-100 text-green-800",
-    Canceled: "bg-red-100 text-red-800",
+  // Status styling
+  const getStatusStyle = (status) => {
+    switch(status) {
+      case "Đã bán":
+        return "bg-green-100 text-green-800";
+      case "Còn trống":
+        return "bg-blue-100 text-blue-800";
+      case "Đã đặt trước":
+        return "bg-yellow-100 text-yellow-800";
+      case "Đã hủy":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-x-auto">
-      <table className="w-full table-auto">
-        <thead>
-          <tr className="text-sm font-medium text-gray-700 border-b border-gray-200">
-            {columnNames.map((name, index) => (
-              <th key={index} className="px-4 py-4 text-center">
+    <div className="overflow-x-auto bg-white rounded-xl shadow-md">
+      <table className="w-full text-left">
+        <thead className="bg-gray-50 border-b">
+          <tr>
+            {Array.isArray(columnNames) && columnNames.map((name, index) => (
+              <th key={index} className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">
                 {name}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>
-          {tickets.map((ticket) => (
-            <tr
-              key={ticket.id}
-              className="text-sm text-gray-700 border-b border-gray-200 hover:bg-gray-50"
-            >
-              <td className="px-4 py-4 text-center">{ticket.movieTitle}</td>
-              <td className="px-4 py-4 text-center">{ticket.roomName}</td>
-              <td className="px-4 py-4 text-center">{ticket.seatNumber}</td>
-              <td className="px-4 py-4 text-center">{ticket.showDate}</td>
-              <td className="px-4 py-4 text-center">{ticket.showTime}</td>
-              <td className="px-4 py-4 text-center">
-                {formatCurrency(ticket.price)}
+        <tbody className="divide-y divide-gray-200">
+          {!Array.isArray(tickets) || tickets.length === 0 ? (
+            <tr>
+              <td colSpan={columnNames?.length || 1} className="px-6 py-4 text-center text-gray-500">
+                Không có dữ liệu vé
               </td>
-              <td className="px-4 py-4 text-center">
-                <span
-                  className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                    ticketStatusColor[ticket.status]
-                  }`}
-                >
-                  {ticket.status}
-                </span>
-              </td>
-              <td className="px-4 py-4 text-center">
-                <div className="flex items-center justify-center space-x-2">
+            </tr>
+          ) : (
+            tickets.map((ticket) => (
+              <tr key={ticket.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {ticket.id}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {ticket.movie}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {ticket.cinema}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {ticket.room}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {ticket.seat}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {ticket.date}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {ticket.time}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {formatCurrency(ticket.price)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyle(ticket.status)}`}>
+                    {ticket.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-3">
                   <button
-                    className="p-1 text-gray-500 hover:text-blue-500"
+                    className="text-blue-600 hover:text-blue-900"
                     onClick={() => {
-                      changeEntry(["Edit ticket", "Edit"]);
-                      setTicketInfo(ticket);
+                      setInfoTicket(ticket.originalData);
+                      changeEntry(["Chỉnh sửa vé", "Lưu"]);
                       setOpen(true);
                     }}
                   >
-                    <BiSolidPencil />
+                    <BsPencil size={18} />
                   </button>
                   <button
-                    className="p-1 text-gray-500 hover:text-red-500"
-                    onClick={() => {
-                      handleDelete(ticket.id);
-                    }}
+                    className="text-red-600 hover:text-red-900"
+                    onClick={() => handleDelete(ticket.id)}
                   >
-                    <MdDelete />
+                    <MdOutlineDelete size={20} />
                   </button>
-                </div>
-              </td>
-            </tr>
-          ))}
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>

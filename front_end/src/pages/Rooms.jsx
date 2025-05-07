@@ -178,8 +178,6 @@ const Rooms = () => {
   const [search, setSearch] = useState("");
   // name, type, seatCount, status, cinema_id
   const handleSearch = async () => {
-    queryRef.current.SearchKey = "name";
-    queryRef.current.SearchValue = search;
     queryRef.current.Page = currentPage;
     const queryString = new URLSearchParams(queryRef.current).toString();
     const response = await fetch(`http://localhost:3000/room?${queryString}`);
@@ -188,8 +186,10 @@ const Rooms = () => {
     setPagination(data.pagination);
   };
   useEffect(() => {
+    console.log("dc", queryRef.current.SearchKey);
+    console.log("dc", queryRef.current.SearchValue);
     handleSearch();
-  }, [currentPage]);
+  }, [currentPage, search, defaultCinemas, defaultRoomTypes]);
   const handleReset = () => {
     setSearch("");
     setDefaultCinemas(Cinemas[0].value);
@@ -210,15 +210,19 @@ const Rooms = () => {
                   placeholder={"Nhập tên phòng"}
                   setSearch={setSearch}
                   search={search}
+                  keySearch={"name"}
+                  queryRef={queryRef}
                 />
               </div>
               <div>
-                <div className="font-medium pb-4">Loại phòng</div>
+                <div className="font-medium pb-4">Rạp</div>
                 <Select
                   options={Cinemas}
                   defaultValue={defaultCinemas}
                   setDefault={setDefaultCinemas}
                   keyStorage={"keyCinemas"}
+                  queryRef={queryRef}
+                  keySearch={"cinemaId"}
                 />
               </div>
               <div>
@@ -228,6 +232,8 @@ const Rooms = () => {
                   defaultValue={defaultRoomTypes}
                   setDefault={setDefaultRoomTypes}
                   keyStorage={"keyRoomTypes"}
+                  queryRef={queryRef}
+                  keySearch={"type"}
                 />
               </div>
             </div>
@@ -238,12 +244,12 @@ const Rooms = () => {
               >
                 Đặt lại
               </div>
-              <div
+              {/* <div
                 className="button flex items-center justify-center hover:cursor-pointer"
                 onClick={handleSearch}
               >
                 Tìm kiếm
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -268,7 +274,7 @@ const Rooms = () => {
             handleDelete={handleDelete}
             setCurrentPage={setCurrentPage}
             currentPage={currentPage}
-            totalPages={pagination.totalPages}
+            totalPages={pagination?.totalPages}
           />
         </div>
       </div>

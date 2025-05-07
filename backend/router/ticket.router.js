@@ -2,19 +2,22 @@ const express = require('express');
 const router = express.Router();
 const Controller = require('../controller/ticket.controller');
 
-// Lấy danh sách vé
+// Lấy danh sách vé với tìm kiếm, sắp xếp, phân trang
 router.get('/', Controller.index);
 
 // Xem chi tiết vé
 router.get('/detail/:id', Controller.detail);
 
-// Thêm vé mới (không liên kết với hóa đơn)
+// Thêm vé mới
 router.post('/add', Controller.add);
 
-// Hủy vé
-router.delete('/cancel/:id', Controller.cancel);
+// Sửa thông tin vé
+router.patch('/edit/:id', Controller.edit);
 
-// Lấy vé theo lịch chiếu
-router.get('/by-showtime/:showtimeId', Controller.getByShowtime);
+// Xóa vé
+router.delete('/delete/:id', Controller.delete);
+
+// Lấy danh sách vé theo lịch chiếu
+router.get('/by-showtime/:showtimeId', Controller.getTicketsByShowtime);
 
 module.exports = router;

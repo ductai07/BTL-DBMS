@@ -1,118 +1,101 @@
-import { BiSolidPencil } from "react-icons/bi";
-import { MdDelete, MdRemoveRedEye } from "react-icons/md";
-import { formatCurrency } from "../utils/formatUtils";
-import { format } from "date-fns";
-import { vi } from "date-fns/locale";
+import React from 'react';
+import { FaEye, FaTrash } from 'react-icons/fa';
+import { formatCurrency } from '../utils/formatUtils';
 
-const TableOrders = ({
-  columnNames,
-  orders,
-  onStatusChange,
-  onViewDetails,
-  handleDelete,
-  setOpen,
-  setOrderInfo,
-  changeEntry,
-}) => {
-  const orderStatusColor = {
-    "Completed": "bg-green-100 text-green-800",
-    "Processing": "bg-blue-100 text-blue-800",
-    "Cancelled": "bg-red-100 text-red-800"
-  };
-
-  // Format datetime string to a readable format
-  const formatDateTime = (dateTimeString) => {
-    const date = new Date(dateTimeString);
-    return format(date, "HH:mm - dd/MM/yyyy", { locale: vi });
-  };
-
-  // Handle status change
-  const handleStatusChange = (orderId, newStatus) => {
-    onStatusChange(orderId, newStatus);
+const TableOrders = ({ orders, onOpenDetails, onUpdateStatus, onDelete }) => {
+  // Get status class for styling
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'Đã thanh toán':
+        return 'bg-green-100 text-green-800';
+      case 'Đang xử lý':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Đã hủy':
+        return 'bg-red-100 text-red-600';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
-      <table className="w-full table-auto">
-        <thead>
-          <tr className="text-sm font-medium text-gray-700 border-b border-gray-200 bg-gray-50">
-            {columnNames.map((name, index) => (
-              <th
-                key={index}
-                className="px-4 py-4 text-center"
-              >
-                {name}
-              </th>
-            ))}
+    <div className="bg-white rounded-lg shadow overflow-hidden">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Mã đơn hàng
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Ngày
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Khách hàng
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Tổng tiền
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Trạng thái
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Sản phẩm
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Thao tác
+            </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white divide-y divide-gray-200">
           {orders.map((order) => (
-            <tr
-              key={order.id}
-              className="text-sm text-gray-700 border-b border-gray-200 hover:bg-gray-50 transition-colors"
-            >
-              <td className="px-4 py-4 text-center font-medium">
-                {order.orderNumber}
+            <tr key={order.id} className="hover:bg-gray-50">
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                #{order.id}
               </td>
-              <td className="px-4 py-4 text-left">
-                {order.customerName}
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {order.date}
               </td>
-              <td className="px-4 py-4 text-center">
-                {formatDateTime(order.orderDate)}
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {order.customer}
               </td>
-              <td className="px-4 py-4 text-center font-medium text-green-700">
-                {formatCurrency(order.totalAmount)}
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {formatCurrency(order.total || 0)}
               </td>
-              <td className="px-4 py-4 text-center">
-                <div className="inline-block relative">
-                  <select
-                    value={order.status}
-                    onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                    className={`${orderStatusColor[order.status]} cursor-pointer appearance-none border-none rounded-full px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-300 min-w-[100px] text-center`}
-                  >
-                    <option value="Processing">Processing</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(order.status)}`}>
+                  {order.status}
+                </span>
               </td>
-              <td className="px-4 py-4 text-center">
-                {order.paymentMethod}
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {order.products}
               </td>
-              <td className="px-4 py-4 text-center">
-                <div className="flex items-center justify-center space-x-2">
+              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <div className="flex space-x-2">
                   <button
-                    title="View Details"
-                    className="p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
-                    onClick={() => onViewDetails(order)}
+                    onClick={() => onOpenDetails(order.id)}
+                    className="text-blue-600 hover:text-blue-900"
+                    title="Xem chi tiết"
                   >
-                    <MdRemoveRedEye />
+                    <FaEye />
                   </button>
+                  
+                  {order.status !== 'Đã hủy' && (
+                    <select
+                      className="text-xs border rounded px-1"
+                      value={order.status}
+                      onChange={(e) => onUpdateStatus(order.id, e.target.value)}
+                    >
+                      <option value="Đang xử lý">Đang xử lý</option>
+                      <option value="Đã thanh toán">Đã thanh toán</option>
+                      <option value="Đã hủy">Đã hủy</option>
+                    </select>
+                  )}
+                  
                   <button
-                    title="Edit Order"
-                    className="p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
-                    onClick={() => {
-                      changeEntry(["Edit order", "Edit"]);
-                      setOrderInfo(order);
-                      setOpen(true);
-                    }}
+                    onClick={() => onDelete(order.id)}
+                    className="text-red-600 hover:text-red-900"
+                    title="Xóa đơn hàng"
                   >
-                    <BiSolidPencil />
-                  </button>
-                  <button
-                    title="Delete Order"
-                    className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                    onClick={() => {
-                      handleDelete(order.id);
-                    }}
-                  >
-                    <MdDelete />
+                    <FaTrash />
                   </button>
                 </div>
               </td>
