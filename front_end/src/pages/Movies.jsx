@@ -178,11 +178,19 @@ const Movies = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [infoFilm, setInfoFilm] = useState({
-    title: "",
-    duration: "",
-    genre: "",
-    status: "",
     id: Date.now(),
+    title: "",
+    genre: "",
+    duration: "",
+    releaseDate: "",
+    poster: "",
+    trailer: "",
+    description: "",
+    ageRating: "",
+    status: "",
+    director: "",
+    mainActor: "",
+    language: "",
   });
   const entry = useRef({});
   const changeEntry = (value) => {
