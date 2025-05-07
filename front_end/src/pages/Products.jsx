@@ -1,308 +1,332 @@
+import { useState, useEffect } from "react";
 import Header from "../component/Header";
-import Select from "../component/Select";
-import { FaPlus, FaSearch, FaTh, FaList } from "react-icons/fa";
-import { useEffect, useState, useRef } from "react";
+import Search from "../component/Search";
+import { FaPlus } from "react-icons/fa";
 import TableProducts from "../component/TableProducts";
 import AddProductModal from "../component/AddProductModal";
 import ProductGridView from "../component/ProductGridView";
-import { formatCurrency } from "../utils/formatUtils";
 
 const Products = () => {
-  // Call api lay data
-  let [data, setData] = useState([
-    {
-      id: 1,
-      name: "Bắp rang bơ lớn",
-      category: "Popcorn",
-      price: 65000,
-      stock: 100,
-      status: "Available",
-      isCombo: false,
-      image: "https://www.cgv.vn/media/catalog/product/cache/1/image/c5f0a1eff4c394a251036189ccddaacd/p/o/popcorn_caramel_1.png"
-    },
-    {
-      id: 2,
-      name: "Coca Cola ly lớn",
-      category: "Drink",
-      price: 35000,
-      stock: 150,
-      status: "Available",
-      isCombo: false,
-      image: "https://www.cgv.vn/media/catalog/product/cache/1/image/c5f0a1eff4c394a251036189ccddaacd/c/o/coke.png"
-    },
-    {
-      id: 3,
-      name: "Combo Couple",
-      category: "Combo",
-      price: 150000,
-      stock: 50,
-      status: "Available",
-      isCombo: true,
-      image: "https://www.cgv.vn/media/catalog/product/cache/1/image/c5f0a1eff4c394a251036189ccddaacd/c/o/combo_for_2_1.png"
-    },
-    {
-      id: 4,
-      name: "Kẹo M&M",
-      category: "Snack",
-      price: 30000,
-      stock: 5,
-      status: "Low Stock",
-      isCombo: false,
-      image: "https://www.cgv.vn/media/catalog/product/cache/1/image/c5f0a1eff4c394a251036189ccddaacd/m/_/m_m.png"
-    },
-    {
-      id: 5,
-      name: "Combo Family",
-      category: "Combo",
-      price: 220000,
-      stock: 0,
-      status: "Out of Stock",
-      isCombo: true,
-      image: "https://www.cgv.vn/media/catalog/product/cache/1/image/c5f0a1eff4c394a251036189ccddaacd/c/g/cgv_family_combo_4.png"
-    },
-  ]);
-  
-  // Call api de update data
-  const handleDelete = (productId) => {
-    setDelete(!Delete);
-    const updateData = data.filter(({ id }) => id != productId);
-    setData(updateData);
-    filterProducts(updateData);
-  };
-
-  const handleAddProduct = (newProduct) => {
-    let updatedProducts = [
-      newProduct,
-      ...data.filter((product) => product.id != newProduct.id),
-    ];
-    setData(updatedProducts);
-    filterProducts(updatedProducts);
-  };
-
-  // Table configuration
-  const columnNames = ["Image", "Product", "Category", "Price", "Stock", "Status", "Actions"];
+  const [view, setView] = useState("grid");
   const [products, setProducts] = useState([]);
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem("productViewMode") || "table");
-  const [searchTerm, setSearchTerm] = useState("");
-  
-  const productCategories = [
-    { key: "all", value: "All Categories" },
-    { key: "popcorn", value: "Popcorn" },
-    { key: "drink", value: "Drink" },
-    { key: "snack", value: "Snack" },
-    { key: "combo", value: "Combo" },
-  ];
-  
-  const productStatuses = [
-    { key: "all", value: "All Status" },
-    { key: "available", value: "Available" },
-    { key: "low_stock", value: "Low Stock" },
-    { key: "out_of_stock", value: "Out of Stock" },
-  ];
-
-  const [defaultCategory, setDefaultCategory] = useState(() => {
-    return localStorage.getItem("keyCategory") || productCategories[0].value;
-  });
-
-  const [defaultProductStatus, setDefaultProductStatus] = useState(() => {
-    return localStorage.getItem("keyProductStatus") || productStatuses[0].value;
-  });
-
-  const filterProducts = (dataToFilter) => {
-    let filtered = dataToFilter;
-
-    // Filter by category
-    if (defaultCategory !== productCategories[0].value) {
-      filtered = filtered.filter((product) => {
-        return product.category === defaultCategory;
-      });
-    }
-
-    // Filter by status
-    if (defaultProductStatus !== productStatuses[0].value) {
-      filtered = filtered.filter((product) => {
-        return product.status === defaultProductStatus;
-      });
-    }
-
-    // Filter by search term
-    if (searchTerm.trim() !== "") {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter((product) => {
-        return product.name.toLowerCase().includes(term) || 
-               product.category.toLowerCase().includes(term);
-      });
-    }
-
-    setProducts(filtered);
-  };
-
-  // Calculate statistics
-  const totalProducts = data.length;
-  const totalCombos = data.filter(product => product.isCombo).length;
-  const lowStockCount = data.filter(product => product.status === "Low Stock").length;
-  const outOfStockCount = data.filter(product => product.status === "Out of Stock").length;
-
-  // Total inventory value
-  const totalValue = data.reduce((sum, product) => sum + (product.price * product.stock), 0);
-
-  useEffect(() => {
-    filterProducts(data);
-  }, [defaultCategory, defaultProductStatus, searchTerm]);
-
-  // View mode toggle
-  const toggleViewMode = (mode) => {
-    setViewMode(mode);
-    localStorage.setItem("productViewMode", mode);
-  };
-
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const [productInfo, setProductInfo] = useState({
-    name: "",
-    category: "",
-    price: "",
-    stock: "",
-    status: "",
-    isCombo: false,
-    image: "",
-    id: Date.now(),
+  const [productInfo, setProductInfo] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    pageSize: 12,
+    total: 0
   });
-  
-  const entry = useRef({});
-  const changeEntry = (value) => {
-    entry.current = {
-      title: value[0],
-      action: value[1],
-    };
+  const [searchText, setSearchText] = useState("");
+
+  // Fetch products from the backend API
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:3000/product?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Transform data to match the expected format
+      const formattedProducts = (data.data || []).map(product => ({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        unit: product.unit || 'Cái',
+        quantity: product.quantity || 0,
+        image: product.image || 'https://placehold.co/300x300?text=No+Image',
+        description: product.description || '',
+        category: product.category || 'Sản phẩm',
+        // Keep original data
+        originalData: product
+      }));
+      
+      setProducts(formattedProducts);
+      applyFilters(formattedProducts, searchText);
+      setPagination({
+        currentPage: data.pagination?.currentPage || 1,
+        totalPages: data.pagination?.totalPages || 1,
+        pageSize: data.pagination?.pageSize || 12,
+        total: data.pagination?.total || 0
+      });
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
+      setProducts([]);
+      setFilteredProducts([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const [Delete, setDelete] = useState(false);
+  // Initial data fetch
+  useEffect(() => {
+    fetchProducts();
+  }, [pagination.currentPage]);
+
+  // Apply filters to products
+  const applyFilters = (productsData, search) => {
+    if (!search) {
+      setFilteredProducts(productsData);
+      return;
+    }
+    
+    const lowerSearch = search.toLowerCase();
+    const filtered = productsData.filter(product => 
+      product.name.toLowerCase().includes(lowerSearch) || 
+      product.description.toLowerCase().includes(lowerSearch) ||
+      product.category.toLowerCase().includes(lowerSearch)
+    );
+    
+    setFilteredProducts(filtered);
+  };
+
+  // Handle search change
+  const handleSearch = (text) => {
+    setSearchText(text);
+    applyFilters(products, text);
+  };
+
+  // Handle adding or editing a product
+  const handleAddProduct = async (productData) => {
+    try {
+      setLoading(true);
+      let response;
+      
+      if (productData.id && productData.originalData) {
+        // Edit existing product
+        response = await fetch(`http://localhost:3000/product/edit/${productData.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: productData.name,
+            price: productData.price,
+            quantity: productData.quantity,
+            unit: productData.unit,
+            description: productData.description,
+            image: productData.image
+          })
+        });
+      } else {
+        // Add new product
+        response = await fetch('http://localhost:3000/product/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: productData.name,
+            price: productData.price,
+            quantity: productData.quantity,
+            unit: productData.unit,
+            description: productData.description,
+            image: productData.image
+          })
+        });
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      // Re-fetch the products after adding/editing
+      await fetchProducts();
+      setIsModalOpen(false);
+      alert(productData.id ? "Cập nhật sản phẩm thành công!" : "Thêm sản phẩm thành công!");
+    } catch (err) {
+      console.error("Error saving product:", err);
+      alert(`Không thể lưu sản phẩm: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle product deletion
+  const handleDeleteProduct = async (productId) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?")) {
+      try {
+        setLoading(true);
+        const response = await fetch(`http://localhost:3000/product/delete/${productId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        
+        // Re-fetch products after deletion
+        await fetchProducts();
+        alert("Xóa sản phẩm thành công!");
+      } catch (err) {
+        console.error("Error deleting product:", err);
+        alert(`Không thể xóa sản phẩm: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({
+      ...prev,
+      currentPage: newPage
+    }));
+  };
 
   return (
-    <div className="w-[100%] h-[100vh] bg-neutral-100 p-5 overflow-auto">
-      <Header title={"Product & Combos Management"} />
-      
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500">Total Products</h3>
-          <p className="text-2xl font-semibold">{totalProducts}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500">Total Combos</h3>
-          <p className="text-2xl font-semibold">{totalCombos}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500">Low/Out of Stock</h3>
-          <p className="text-2xl font-semibold text-yellow-600">{lowStockCount + outOfStockCount}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500">Inventory Value</h3>
-          <p className="text-2xl font-semibold text-green-600">{formatCurrency(totalValue)}</p>
-        </div>
-      </div>
-      
-      <div>
-        {/* Filters and actions */}
-        <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 w-full sm:w-64"
-              />
-              <FaSearch className="absolute left-3 top-3 text-gray-400" />
-            </div>
-            <Select
-              options={productCategories}
-              defaultValue={defaultCategory}
-              setDefault={setDefaultCategory}
-              keyStorage={"keyCategory"}
+    <div className="w-full min-h-screen bg-gray-100">
+      <div className="p-6">
+        <Header title="Quản lý sản phẩm" />
+        
+        {/* Top Controls */}
+        <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <Search 
+              placeholder="Tìm kiếm sản phẩm..." 
+              onSearch={handleSearch} 
+              search={searchText}
             />
-            <Select
-              options={productStatuses}
-              defaultValue={defaultProductStatus}
-              setDefault={setDefaultProductStatus}
-              keyStorage={"keyProductStatus"}
-            />
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center bg-white border border-gray-300 rounded-md overflow-hidden">
+            
+            <div className="flex rounded-lg overflow-hidden">
               <button 
-                onClick={() => toggleViewMode('table')} 
-                className={`p-2 ${viewMode === 'table' ? 'bg-blue-100 text-blue-600' : 'text-gray-500'}`}
-                title="Table View"
+                className={`px-4 py-2 ${view === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
+                onClick={() => setView('grid')}
               >
-                <FaList />
+                Grid
               </button>
               <button 
-                onClick={() => toggleViewMode('grid')} 
-                className={`p-2 ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-500'}`}
-                title="Grid View"
+                className={`px-4 py-2 ${view === 'table' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
+                onClick={() => setView('table')}
               >
-                <FaTh />
+                Table
               </button>
             </div>
-            <button
-              className="button flex items-center mx-auto bg-blue-600 hover:bg-blue-700 text-white rounded-md"
-              onClick={() => {
-                setIsModalOpen(true);
-                changeEntry(["Add new product", "Add"]);
-              }}
-            >
-              <FaPlus />
-              Add product
-            </button>
           </div>
+          
+          <button
+            onClick={() => {
+              setProductInfo(null);
+              setIsModalOpen(true);
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <FaPlus /> Thêm sản phẩm
+          </button>
         </div>
         
-        {/* Product list display */}
-        {!products.length ? (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <img 
-              src="https://cdn-icons-png.flaticon.com/512/5445/5445197.png" 
-              alt="No products" 
-              className="w-24 h-24 mx-auto opacity-50"
-            />
-            <p className="text-center font-semibold text-xl mt-4 text-gray-700">
-              Không có sản phẩm nào được tìm thấy!
-            </p>
-            <p className="text-gray-500 mt-2">
-              Thử thay đổi bộ lọc hoặc thêm sản phẩm mới
-            </p>
+        {/* Content */}
+        {loading ? (
+          <div className="flex justify-center py-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
           </div>
-        ) : viewMode === 'table' ? (
-          <TableProducts
-            columnNames={columnNames}
-            products={products}
-            setOpen={setIsModalOpen}
-            setProductInfo={setProductInfo}
-            changeEntry={changeEntry}
-            handleDelete={handleDelete}
-          />
+        ) : error ? (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+            {error}
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="bg-white p-8 rounded-lg text-center shadow-sm">
+            <p className="text-gray-500">Không tìm thấy sản phẩm nào.</p>
+          </div>
         ) : (
-          <ProductGridView 
-            products={products}
-            setOpen={setIsModalOpen}
-            setProductInfo={setProductInfo}
-            changeEntry={changeEntry}
-            handleDelete={handleDelete}
-          />
+          <>
+            {view === 'grid' ? (
+              <ProductGridView 
+                products={filteredProducts}
+                onEdit={(product) => {
+                  setProductInfo(product);
+                  setIsModalOpen(true);
+                }}
+                onDelete={handleDeleteProduct}
+              />
+            ) : (
+              <TableProducts 
+                products={filteredProducts} 
+                onEdit={(product) => {
+                  setProductInfo(product);
+                  setIsModalOpen(true);
+                }}
+                onDelete={handleDeleteProduct}
+              />
+            )}
+            
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="flex justify-center mt-6">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handlePageChange(Math.max(1, pagination.currentPage - 1))}
+                    disabled={pagination.currentPage === 1}
+                    className={`px-3 py-1 rounded ${pagination.currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                  >
+                    Trước
+                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {[...Array(pagination.totalPages)].map((_, i) => {
+                      // Show max 5 page numbers with ellipsis
+                      if (
+                        pagination.totalPages <= 5 ||
+                        i + 1 === 1 ||
+                        i + 1 === pagination.totalPages ||
+                        (i + 1 >= pagination.currentPage - 1 && i + 1 <= pagination.currentPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => handlePageChange(i + 1)}
+                            className={`w-8 h-8 flex items-center justify-center rounded ${
+                              pagination.currentPage === i + 1
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                            }`}
+                          >
+                            {i + 1}
+                          </button>
+                        );
+                      } else if (
+                        (i === 1 && pagination.currentPage > 3) ||
+                        (i === pagination.totalPages - 2 && pagination.currentPage < pagination.totalPages - 2)
+                      ) {
+                        return <span key={i}>...</span>;
+                      }
+                      return null;
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.currentPage + 1))}
+                    disabled={pagination.currentPage === pagination.totalPages}
+                    className={`px-3 py-1 rounded ${pagination.currentPage === pagination.totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                  >
+                    Tiếp
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
       
+      {/* Add/Edit Product Modal */}
       <AddProductModal
-        title={entry.current.title}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onAddProduct={handleAddProduct}
-        info={productInfo}
-        setInfo={setProductInfo}
-        Entry={entry.current.action}
+        onSave={handleAddProduct}
+        product={productInfo}
+        title={productInfo ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
       />
     </div>
   );

@@ -1,14 +1,23 @@
 const { Sequelize } = require('sequelize');
-const sequelize = new Sequelize('LMQ', 'sa', '2411', {
+
+const sequelize = new Sequelize({
   dialect: 'mssql',
-  host: 'localhost',
+  host: 'localhost', // or '.' for local SQL Server
+  database: 'QL', // your database name
+  username: 'sa', // SQL Server sa account
+  password: '111111', // your password
   dialectOptions: {
     options: {
-      instanceName: 'SQLEXPRESS',
-      trustServerCertificate: true,
       encrypt: false,
+      trustServerCertificate: true,
       requestTimeout: 30000
     }
+  },
+  define: {
+    // Use this to specify schema for all models
+    schema: 'dbo',
+    // Ensure model names match table names exactly
+    freezeTableName: true
   },
   logging: console.log
 });

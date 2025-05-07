@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Controller = require('../controller/cinnema.controller');
+const Controller = require('../controller/cinema.controller');
 
 // Lấy danh sách rạp với tìm kiếm, sắp xếp, phân trang
 router.get('/', Controller.index);

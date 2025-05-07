@@ -461,3 +461,138 @@ module.exports.getTickets = async (req, res) => {
         });
     }
 };
+
+// Lấy danh sách ghế theo lịch chiếu (để hiển thị sơ đồ ghế)
+module.exports.getSeats = async (req, res) => {
+    try {
+        const showtimeId = req.params.id;
+        
+        // Kiểm tra lịch chiếu có tồn tại không
+        const showtime = await Model.ShowTime.findByPk(showtimeId);
+        
+        if (!showtime) {
+            return res.status(404).json({
+                message: 'Showtime not found'
+            });
+        }
+        
+        // Lấy thông tin phòng của lịch chiếu
+        const room = await Model.Room.findByPk(showtime.room_id);
+        
+        if (!room) {
+            return res.status(404).json({
+                message: 'Room information not found'
+            });
+        }
+        
+        // Lấy tất cả ghế trong phòng
+        const seats = await Model.Seat.findAll({
+            where: { room_id: room.id },
+            attributes: ['id', 'position', 'type', 'status', 'price'],
+            order: [['position', 'ASC']]
+        });
+        
+        // Lấy danh sách ghế đã bán cho lịch chiếu này
+        const soldSeats = await Model.Ticket.findAll({
+            where: { showtime_id: showtimeId },
+            attributes: ['seat_id']
+        });
+        
+        // Danh sách ID ghế đã bán
+        const soldSeatIds = soldSeats.map(ticket => ticket.seat_id);
+        
+        // Thêm thông tin trạng thái đặt chỗ vào mỗi ghế
+        const seatsWithBookingStatus = seats.map(seat => {
+            const seatData = seat.get({ plain: true });
+            return {
+                ...seatData,
+                isBooked: soldSeatIds.includes(seat.id)
+            };
+        });
+        
+        res.status(200).json({
+            data: {
+                room: {
+                    id: room.id,
+                    name: room.name,
+                    type: room.type,
+                    seatCount: room.seatCount
+                },
+                seats: seatsWithBookingStatus
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error retrieving seats for showtime',
+            error: error.message
+        });
+    }
+};
+
+// Lấy thông tin phim và phòng của lịch chiếu
+module.exports.getInfo = async (req, res) => {
+    try {
+        const showtimeId = req.params.id;
+        
+        const showtime = await Model.ShowTime.findByPk(showtimeId, {
+            include: [
+                {
+                    model: Model.Movie,
+                    attributes: ['id', 'title', 'duration', 'poster', 'genre', 'director', 'mainActor', 'description', 'ageRating']
+                },
+                {
+                    model: Model.Room,
+                    attributes: ['id', 'name', 'type', 'seatCount'],
+                    include: [
+                        {
+                            model: Model.Cinema,
+                            attributes: ['id', 'name', 'address']
+                        }
+                    ]
+                }
+            ]
+        });
+        
+        if (!showtime) {
+            return res.status(404).json({
+                message: 'Showtime not found'
+            });
+        }
+        
+        res.status(200).json({
+            data: showtime
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error retrieving showtime information',
+            error: error.message
+        });
+    }
+};
+
+// Lấy danh sách các ngày chiếu
+module.exports.getDates = async (req, res) => {
+    try {
+        // Truy vấn tất cả các ngày chiếu duy nhất
+        const dates = await sequelize.query(
+            `SELECT DISTINCT showDate 
+             FROM ShowTime 
+             WHERE showDate >= CURDATE() 
+             ORDER BY showDate ASC`,
+            {
+                type: sequelize.QueryTypes.SELECT
+            }
+        );
+        
+        res.status(200).json({
+            success: true,
+            data: dates.map(item => item.showDate)
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error retrieving showtime dates',
+            error: error.message
+        });
+    }
+};

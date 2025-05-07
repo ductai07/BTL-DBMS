@@ -29,7 +29,7 @@ const Customer = sequelize.define('Customer', {
     allowNull: true
   }
 }, {
-  tableName: 'Customer',
+  tableName: 'Customer', // Ensure this matches exactly your SQL Server table name
   timestamps: false
 });
 

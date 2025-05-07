@@ -1,275 +1,276 @@
 import Header from "../component/Header";
 import Select from "../component/Select";
 import { FaPlus } from "react-icons/fa";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import AddRoom from "../component/AddRoom";
 import TableRooms from "../component/TableRooms";
 import Search from "../component/Search";
 
 const Rooms = () => {
-  // Call api lay data
-  const [rooms, setRooms] = useState([
-    {
-      id: 1,
-      roomName: "Screen 1",
-      cinema: "Cinema City Downtown",
-      capacity: 180,
-      type: "Standard",
-    },
-    {
-      id: 2,
-      roomName: "VIP Room A",
-      cinema: "Megaplex Central",
-      capacity: 60,
-      type: "VIP",
-    },
-    {
-      id: 3,
-      roomName: "IMAX Theater",
-      cinema: "Star Cinema Mall",
-      capacity: 300,
-      type: "IMAX",
-    },
-    {
-      id: 4,
-      roomName: "Screen 2",
-      cinema: "Cinema City Downtown",
-      capacity: 150,
-      type: "Standard",
-    },
-    {
-      id: 5,
-      roomName: "VIP Room B",
-      cinema: "Megaplex Central",
-      capacity: 50,
-      type: "VIP",
-    },
-    {
-      id: 6,
-      roomName: "IMAX Theater 2",
-      cinema: "Star Cinema Mall",
-      capacity: 320,
-      type: "IMAX",
-    },
-    {
-      id: 7,
-      roomName: "Screen 3",
-      cinema: "Cinema City Downtown",
-      capacity: 170,
-      type: "Standard",
-    },
-    {
-      id: 8,
-      roomName: "Deluxe Room",
-      cinema: "Luxury Cinemas",
-      capacity: 100,
-      type: "VIP",
-    },
-    {
-      id: 9,
-      roomName: "Screen 4",
-      cinema: "Downtown Cinemas",
-      capacity: 160,
-      type: "Standard",
-    },
-    {
-      id: 10,
-      roomName: "Private Room",
-      cinema: "Megaplex Central",
-      capacity: 40,
-      type: "VIP",
-    },
-    {
-      id: 11,
-      roomName: "IMAX Hall",
-      cinema: "Star Cinema Mall",
-      capacity: 310,
-      type: "IMAX",
-    },
-    {
-      id: 12,
-      roomName: "Screen 5",
-      cinema: "Cinema City North",
-      capacity: 140,
-      type: "Standard",
-    },
-    {
-      id: 13,
-      roomName: "VIP Lounge",
-      cinema: "Cinema City Downtown",
-      capacity: 65,
-      type: "VIP",
-    },
-    {
-      id: 14,
-      roomName: "IMAX Galaxy",
-      cinema: "Galaxy Cineplex",
-      capacity: 350,
-      type: "IMAX",
-    },
-    {
-      id: 15,
-      roomName: "Screen 6",
-      cinema: "Megaplex Central",
-      capacity: 155,
-      type: "Standard",
-    },
-  ]);
-  // call api de update data
-  const handleAddRoom = (newRoom) => {
-    const updateRooms = [
-      newRoom,
-      ...rooms.filter((room) => room.id != newRoom.id),
-    ];
-    setRooms(updateRooms);
-    filterRooms(updateRooms);
-  };
-
-  const handleDelete = (roomId) => {
-    const updateRooms = rooms.filter((room) => room.id != roomId);
-    setRooms(updateRooms);
-    filterRooms(updateRooms);
-  };
-
-  // Khong lien quan
-  const Cinemas = [
-    { key: "all", value: "All Cinemas" },
-    { key: "cinema city downtown", value: "Cinema City Downtown" },
-    { key: "megaplex central", value: "Megaplex Central" },
-    { key: "star cinema mall", value: "Star Cinema Mall" },
-    { key: "luxury cinemas", value: "Luxury Cinemas" },
-    { key: "downtown cinemas", value: "Downtown Cinemas" },
-    { key: "cinema city north", value: "Cinema City North" },
-    { key: "galaxy cineplex", value: "Galaxy Cineplex" },
-  ];
-
-  const roomsTypes = [
-    { key: "all", value: "All Room Types" },
-    { key: "standard", value: "Standard" },
-    { key: "vip", value: "VIP" },
-    { key: "imax", value: "IMAX" },
-    { key: "deluxe", value: "Deluxe" },
-    { key: "private", value: "Private" },
-    { key: "lounge", value: "Lounge" },
-    { key: "premium", value: "Premium" },
-  ];
-
-  const columnNames = ["Room Name", "Cinema", "Capacity", "Type", "Action"];
-
-  const [defaultCinemas, setDefaultCinemas] = useState(
-    () => localStorage.getItem("keyCinemas") || Cinemas[0].value
-  );
-  const [defaultRoomTypes, setDefaultRoomTypes] = useState(
-    () => localStorage.getItem("keyRoomTypes") || roomsTypes[0].value
-  );
-
+  const [rooms, setRooms] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const entry = useRef({
-    title: "",
-    action: "",
-  });
-  const changeEntry = (newEntry) => {
-    entry.current = {
-      title: newEntry[0],
-      action: newEntry[1],
-    };
+  const [roomInfo, setRoomInfo] = useState(null);
+  const [modalEntry, setModalEntry] = useState(["Add Room", "Add"]);
+  const [cinemaFilter, setCinemaFilter] = useState("all");
+  const [searchText, setSearchText] = useState("");
+  const [cinemas, setCinemas] = useState([]);
+
+  // Columns for the rooms table
+  const columnNames = ["Room Name", "Cinema", "Capacity", "Type", "Actions"];
+
+  // Fetch cinemas from the API
+  const fetchCinemas = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/cinema');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch cinemas');
+      }
+      
+      const data = await response.json();
+      
+      // Format for dropdown
+      const cinemaOptions = [
+        { key: "all", value: "All Cinemas" },
+        ...(data.data || []).map(cinema => ({
+          key: cinema.id.toString(),
+          value: cinema.name
+        }))
+      ];
+      
+      setCinemas(cinemaOptions);
+    } catch (error) {
+      console.error('Error fetching cinemas:', error);
+      setCinemas([{ key: "all", value: "All Cinemas" }]);
+    }
   };
 
-  const [infoRoom, setInfoRoom] = useState({
-    roomName: "",
-    cinema: "",
-    capacity: "",
-    type: "",
-    id: Date.now(),
-  });
+  // Fetch rooms from the API
+  const fetchRooms = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:3000/room');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Transform data to match the expected format
+      const formattedRooms = (data.data || []).map(room => ({
+        id: room.id,
+        roomName: room.name,
+        cinema: room.Cinema ? room.Cinema.name : "Unknown",
+        cinema_id: room.cinema_id,
+        capacity: room.seatCount || 0,
+        type: room.type || "Standard",
+        status: room.status || "Active",
+        // Keep the original data for reference if needed
+        originalData: room
+      }));
+      
+      setRooms(formattedRooms);
+      filterRooms(formattedRooms, cinemaFilter, searchText);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching rooms:", err);
+      setError("Failed to load rooms. Please try again later.");
+      setRooms([]);
+      setFilteredRooms([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const [search, setSearch] = useState("");
-  const handleReset = () => {
-    setSearch("");
-    setDefaultCinemas(Cinemas[0].value);
-    setDefaultRoomTypes(roomsTypes[0].value);
+  // Initial data fetch
+  useEffect(() => {
+    fetchCinemas();
+    fetchRooms();
+  }, []);
+
+  // Filter rooms based on cinema and search text
+  const filterRooms = (roomsData, cinema, search) => {
+    let filtered = roomsData;
+    
+    // Filter by cinema
+    if (cinema && cinema !== "all") {
+      filtered = filtered.filter(room => 
+        room.cinema_id === parseInt(cinema) || 
+        room.cinema_id === cinema
+      );
+    }
+    
+    // Filter by search text
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(room => 
+        room.roomName.toLowerCase().includes(searchLower) ||
+        room.cinema.toLowerCase().includes(searchLower) ||
+        room.type.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    setFilteredRooms(filtered);
+  };
+
+  // Handle cinema filter change
+  const handleCinemaChange = (value) => {
+    setCinemaFilter(value);
+    filterRooms(rooms, value, searchText);
+  };
+
+  // Handle search text change
+  const handleSearchChange = (value) => {
+    setSearchText(value);
+    filterRooms(rooms, cinemaFilter, value);
+  };
+
+  // Handle adding or editing a room
+  const handleAddRoom = async (roomData) => {
+    try {
+      setLoading(true);
+      let response;
+      
+      if (roomData.id) {
+        // Edit existing room
+        response = await fetch(`http://localhost:3000/room/edit/${roomData.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: roomData.roomName,
+            cinema_id: roomData.cinema_id,
+            type: roomData.type,
+            status: roomData.status || 'Active'
+          })
+        });
+      } else {
+        // Add new room
+        response = await fetch('http://localhost:3000/room/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: roomData.roomName,
+            cinema_id: roomData.cinema_id,
+            type: roomData.type,
+            status: 'Active'
+          })
+        });
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      // Re-fetch rooms after successful operation
+      await fetchRooms();
+      setIsModalOpen(false);
+      alert(roomData.id ? "Room updated successfully!" : "Room added successfully!");
+    } catch (err) {
+      console.error("Error saving room:", err);
+      alert(`Failed to save room: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle room deletion
+  const handleDelete = async (roomId) => {
+    if (window.confirm("Are you sure you want to delete this room?")) {
+      try {
+        setLoading(true);
+        const response = await fetch(`http://localhost:3000/room/delete/${roomId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        
+        // Re-fetch rooms after successful deletion
+        await fetchRooms();
+        alert("Room deleted successfully!");
+      } catch (err) {
+        console.error("Error deleting room:", err);
+        alert(`Failed to delete room: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   return (
-    <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
-      <Header title={"Cinema Management"} />
-      <div>
-        <div className="flex justify-between mb-6  bg-white p-5 shadow-md rounded-xl">
-          <div>
-            <div className="flex gap-2 mb-4">
-              <div>
-                <div className="font-medium pb-4">Mã phòng</div>
-                <Search
-                  placeholder={"Nhập tên phòng"}
-                  setSearch={setSearch}
-                  search={search}
-                />
-              </div>
-              <div>
-                <div className="font-medium pb-4">Loại phòng</div>
-                <Select
-                  options={Cinemas}
-                  defaultValue={defaultCinemas}
-                  setDefault={setDefaultCinemas}
-                  keyStorage={"keyCinemas"}
-                />
-              </div>
-              <div>
-                <div className="font-medium pb-4">Loại phòng</div>
-                <Select
-                  options={roomsTypes}
-                  defaultValue={defaultRoomTypes}
-                  setDefault={setDefaultRoomTypes}
-                  keyStorage={"keyRoomTypes"}
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div
-                className="button !bg-white !text-black border border-black flex items-center justify-center hover:cursor-pointer"
-                onClick={handleReset}
-              >
-                Đặt lại
-              </div>
-              <div
-                className="button flex items-center justify-center hover:cursor-pointer"
-                handleSearch
-              >
-                Tìm kiếm
-              </div>
-            </div>
-          </div>
-
-          <button
-            className="button flex items-center gap-1"
-            onClick={() => {
-              setIsModalOpen(true);
-              changeEntry(["Add room", "Add"]);
-            }}
-          >
-            <FaPlus />
-            Add Room
-          </button>
-        </div>
-        <div>
-          <TableRooms
-            columnNames={columnNames}
-            rooms={rooms}
-            setOpen={setIsModalOpen}
-            setInfoRoom={setInfoRoom}
-            changeEntry={changeEntry}
-            handleDelelte={handleDelete}
+    <div className="w-[100%] h-[100vh] bg-neutral-100 p-5 overflow-auto">
+      <Header title="Room Management" />
+      
+      {/* Controls */}
+      <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+        <div className="flex items-center gap-4">
+          <Search 
+            onSearch={handleSearchChange} 
+            placeholder="Search rooms..." 
+          />
+          <Select 
+            options={cinemas}
+            value={cinemaFilter}
+            onChange={handleCinemaChange}
           />
         </div>
+        
+        <button
+          onClick={() => {
+            setRoomInfo(null);
+            setModalEntry(["Add Room", "Add"]);
+            setIsModalOpen(true);
+          }}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+        >
+          <FaPlus /> Add Room
+        </button>
       </div>
+      
+      {/* Room Content */}
+      {loading ? (
+        <div className="flex justify-center py-10">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+          {error}
+        </div>
+      ) : filteredRooms.length === 0 ? (
+        <div className="bg-white p-8 rounded-lg text-center shadow-sm">
+          <p className="text-gray-500">No rooms found. Please add a new room or change your filters.</p>
+        </div>
+      ) : (
+        <TableRooms
+          columnNames={columnNames}
+          rooms={filteredRooms}
+          setOpen={setIsModalOpen}
+          setInfoRoom={setRoomInfo}
+          changeEntry={setModalEntry}
+          handleDelete={handleDelete}
+        />
+      )}
+      
+      {/* Room Modal */}
       <AddRoom
-        title={entry.current.title}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onAddRoom={handleAddRoom}
-        entry={entry.current.action}
-        infoRoom={infoRoom}
-        setInfoRoom={setInfoRoom}
+        onSave={handleAddRoom}
+        title={modalEntry[0]}
+        buttonText={modalEntry[1]}
+        roomInfo={roomInfo}
+        cinemas={cinemas.filter(cinema => cinema.key !== "all")}
       />
     </div>
   );

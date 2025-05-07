@@ -1,375 +1,386 @@
+import { useState, useEffect } from "react";
 import Header from "../component/Header";
-import Select from "../component/Select";
-import { FaPlus, FaSearch, FaFilter } from "react-icons/fa";
-import { useEffect, useState, useRef } from "react";
+import Search from "../component/Search";
+import { FaPlus } from "react-icons/fa";
 import TableOrders from "../component/TableOrders";
 import AddOrderModal from "../component/AddOrderModal";
 import OrderDetailsModal from "../component/OrderDetailsModal";
+import Select from "../component/Select";
 import { formatCurrency } from "../utils/formatUtils";
 
 const Orders = () => {
-  // Sample data - would normally come from an API
-  let [data, setData] = useState([
-    {
-      id: 1,
-      orderNumber: "ORD-2025-001",
-      customerName: "Nguyễn Văn A",
-      orderDate: "2025-04-24T19:30:00",
-      totalAmount: 275000,
-      status: "Completed",
-      items: [
-        { id: 1, name: "Ticket: The Dark Knight (Room A1, Seat A12)", price: 120000, quantity: 1 },
-        { id: 2, name: "Bắp rang bơ lớn", price: 65000, quantity: 1 },
-        { id: 3, name: "Coca Cola ly lớn", price: 35000, quantity: 2 }
-      ],
-      paymentMethod: "Credit Card"
-    },
-    {
-      id: 2,
-      orderNumber: "ORD-2025-002",
-      customerName: "Trần Thị B",
-      orderDate: "2025-04-24T20:15:00",
-      totalAmount: 150000,
-      status: "Processing",
-      items: [
-        { id: 1, name: "Ticket: Inception (Room B2, Seat C5)", price: 150000, quantity: 1 }
-      ],
-      paymentMethod: "Cash"
-    },
-    {
-      id: 3,
-      orderNumber: "ORD-2025-003",
-      customerName: "Lê Văn C",
-      orderDate: "2025-04-25T10:45:00",
-      totalAmount: 370000,
-      status: "Completed",
-      items: [
-        { id: 1, name: "Ticket: Interstellar (Room A2, Seat D8)", price: 120000, quantity: 2 },
-        { id: 2, name: "Combo Couple", price: 130000, quantity: 1 }
-      ],
-      paymentMethod: "Banking App"
-    },
-    {
-      id: 4,
-      orderNumber: "ORD-2025-004",
-      customerName: "Phạm Thị D",
-      orderDate: "2025-04-25T13:20:00",
-      totalAmount: 185000,
-      status: "Cancelled",
-      items: [
-        { id: 1, name: "Ticket: The Dark Knight (Room A1, Seat B5)", price: 120000, quantity: 1 },
-        { id: 2, name: "Bắp rang bơ lớn", price: 65000, quantity: 1 }
-      ],
-      paymentMethod: "Credit Card"
-    },
-    {
-      id: 5,
-      orderNumber: "ORD-2025-005",
-      customerName: "Hoàng Văn E",
-      orderDate: "2025-04-25T14:10:00",
-      totalAmount: 220000,
-      status: "Processing",
-      items: [
-        { id: 1, name: "Combo Family", price: 220000, quantity: 1 }
-      ],
-      paymentMethod: "Cash"
-    }
-  ]);
-  
-  // API calls for data management
-  const handleDelete = (orderId) => {
-    setDelete(!Delete);
-    const updateData = data.filter(({ id }) => id != orderId);
-    setData(updateData);
-    filterOrders(updateData);
-  };
-
-  const handleAddOrder = (newOrder) => {
-    let updatedOrders = [
-      newOrder,
-      ...data.filter((order) => order.id != newOrder.id),
-    ];
-    setData(updatedOrders);
-    filterOrders(updatedOrders);
-  };
-
-  const handleUpdateStatus = (id, newStatus) => {
-    const updatedData = data.map(order => 
-      order.id === id ? {...order, status: newStatus} : order
-    );
-    setData(updatedData);
-    filterOrders(updatedData);
-  };
-
-  // Table configuration
-  const columnNames = ["Order #", "Customer", "Date", "Amount", "Status", "Payment", "Actions"];
   const [orders, setOrders] = useState([]);
+  const [filteredOrders, setFilteredOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [orderDetails, setOrderDetails] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  
-  const orderStatuses = [
-    { key: "all", value: "All Status" },
-    { key: "completed", value: "Completed" },
-    { key: "processing", value: "Processing" },
-    { key: "cancelled", value: "Cancelled" }
-  ];
-  
-  const paymentMethods = [
-    { key: "all", value: "All Payments" },
-    { key: "cash", value: "Cash" },
-    { key: "credit_card", value: "Credit Card" },
-    { key: "banking_app", value: "Banking App" }
-  ];
-
-  const [defaultOrderStatus, setDefaultOrderStatus] = useState(() => {
-    return localStorage.getItem("keyOrderStatus") || orderStatuses[0].value;
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    pageSize: 10,
+    total: 0
   });
 
-  const [defaultPaymentMethod, setDefaultPaymentMethod] = useState(() => {
-    return localStorage.getItem("keyPaymentMethod") || paymentMethods[0].value;
-  });
-
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-
-  const filterOrders = (dataToFilter) => {
-    let filtered = dataToFilter;
-
-    // Filter by status
-    if (defaultOrderStatus !== orderStatuses[0].value) {
-      filtered = filtered.filter((order) => {
-        return order.status === defaultOrderStatus;
-      });
-    }
-
-    // Filter by payment method
-    if (defaultPaymentMethod !== paymentMethods[0].value) {
-      filtered = filtered.filter((order) => {
-        return order.paymentMethod === defaultPaymentMethod;
-      });
-    }
-
-    // Filter by date range
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59); // Set to end of day
+  // Fetch orders from the database
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      let url = `http://localhost:3000/invoice?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
       
-      filtered = filtered.filter(order => {
-        const orderDate = new Date(order.orderDate);
-        return orderDate >= start && orderDate <= end;
+      // Add status filter if applicable
+      if (statusFilter !== "all") {
+        url += `&status=${encodeURIComponent(statusFilter)}`;
+      }
+      
+      // Add search term if applicable
+      if (searchTerm) {
+        url += `&SearchKey=customerName&SearchValue=${encodeURIComponent(searchTerm)}`;
+      }
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Format data for the component
+      const formattedOrders = (data.data || []).map(invoice => ({
+        id: invoice.id,
+        date: formatDate(invoice.date),
+        customer: invoice.Customer ? `${invoice.Customer.name} (${invoice.Customer.phone})` : "Khách vãng lai",
+        total: invoice.total,
+        status: invoice.status,
+        products: invoice.ProductUsages?.length || 0,
+        ticketId: invoice.ticket_id,
+        // Keep original data for reference
+        originalData: invoice
+      }));
+      
+      setOrders(formattedOrders);
+      setFilteredOrders(formattedOrders);
+      setPagination({
+        currentPage: data.pagination?.currentPage || 1,
+        totalPages: data.pagination?.totalPages || 1,
+        pageSize: data.pagination?.pageSize || 10,
+        total: data.pagination?.total || 0
       });
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      setError("Không thể tải dữ liệu đơn hàng. Vui lòng thử lại sau.");
+    } finally {
+      setLoading(false);
     }
-
-    // Filter by search term
-    if (searchTerm.trim() !== "") {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter((order) => {
-        return order.orderNumber.toLowerCase().includes(term) || 
-               order.customerName.toLowerCase().includes(term);
-      });
-    }
-
-    setOrders(filtered);
   };
 
-  // Calculate statistics
-  const totalOrders = data.length;
-  const completedOrders = data.filter(order => order.status === "Completed").length;
-  const totalRevenue = data.reduce((sum, order) => 
-    order.status !== "Cancelled" ? sum + order.totalAmount : sum, 0
-  );
-  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
+  // Load initial data
   useEffect(() => {
-    filterOrders(data);
-  }, [defaultOrderStatus, defaultPaymentMethod, searchTerm, startDate, endDate]);
+    fetchOrders();
+  }, [pagination.currentPage, statusFilter]);
 
-  // Modal states
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  // Format date function (YYYY-MM-DD to DD/MM/YYYY)
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (isNaN(date)) return dateString;
+    
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
+  };
 
-  // Selected order for details
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  // Handle order search
+  useEffect(() => {
+    if (searchTerm === "") {
+      setFilteredOrders(orders);
+    } else {
+      const lowerSearch = searchTerm.toLowerCase();
+      const filtered = orders.filter(order => {
+        return (
+          (order.customer && order.customer.toLowerCase().includes(lowerSearch)) ||
+          (order.id.toString().includes(lowerSearch))
+        );
+      });
+      setFilteredOrders(filtered);
+    }
+  }, [searchTerm, orders]);
 
-  // View order details
-  const viewOrderDetails = (order) => {
-    setSelectedOrder(order);
+  // Handle status filter change
+  const handleStatusFilterChange = (status) => {
+    setStatusFilter(status);
+    // Resetting to page 1 since filter changed
+    setPagination(prev => ({
+      ...prev,
+      currentPage: 1
+    }));
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({
+      ...prev,
+      currentPage: newPage
+    }));
+  };
+
+  // Fetch order details when opening the details modal
+  const fetchOrderDetails = async (orderId) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:3000/invoice/${orderId}/details`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setOrderDetails(data.data);
+    } catch (err) {
+      console.error("Error fetching order details:", err);
+      alert("Không thể tải chi tiết đơn hàng. Vui lòng thử lại sau.");
+      setOrderDetails(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle opening order details
+  const handleOpenOrderDetails = async (orderId) => {
+    setSelectedOrderId(orderId);
+    await fetchOrderDetails(orderId);
     setIsDetailsModalOpen(true);
   };
 
-  const [orderInfo, setOrderInfo] = useState({
-    orderNumber: "",
-    customerName: "",
-    orderDate: new Date().toISOString(),
-    totalAmount: "",
-    status: "",
-    items: [],
-    paymentMethod: "",
-    id: Date.now(),
-  });
-  
-  const entry = useRef({});
-  const changeEntry = (value) => {
-    entry.current = {
-      title: value[0],
-      action: value[1],
-    };
+  // Handle order creation
+  const handleCreateOrder = async (orderData) => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:3000/invoice/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      // Re-fetch orders
+      await fetchOrders();
+      setIsModalOpen(false);
+      alert("Tạo đơn hàng thành công!");
+    } catch (err) {
+      console.error("Error creating order:", err);
+      alert(`Không thể tạo đơn hàng: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const [Delete, setDelete] = useState(false);
-  const [showFilter, setShowFilter] = useState(false);
+  // Handle order deletion
+  const handleDeleteOrder = async (orderId) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa đơn hàng này không?")) {
+      try {
+        setLoading(true);
+        const response = await fetch(`http://localhost:3000/invoice/delete/${orderId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        
+        // Re-fetch orders
+        await fetchOrders();
+        alert("Xóa đơn hàng thành công!");
+      } catch (err) {
+        console.error("Error deleting order:", err);
+        alert(`Không thể xóa đơn hàng: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Update order status
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:3000/invoice/update-status/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      // Re-fetch orders
+      await fetchOrders();
+      alert("Cập nhật trạng thái đơn hàng thành công!");
+    } catch (err) {
+      console.error("Error updating order status:", err);
+      alert(`Không thể cập nhật trạng thái đơn hàng: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Status options
+  const statusOptions = [
+    { key: "all", value: "Tất cả trạng thái" },
+    { key: "Đang xử lý", value: "Đang xử lý" },
+    { key: "Đã thanh toán", value: "Đã thanh toán" },
+    { key: "Đã hủy", value: "Đã hủy" }
+  ];
 
   return (
-    <div className="w-[100%] h-[100vh] bg-neutral-100 p-5 overflow-auto">
-      <Header title={"Order Management"} />
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <Header title="Quản lý đơn hàng" />
       
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500">Total Orders</h3>
-          <p className="text-2xl font-semibold">{totalOrders}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500">Completed Orders</h3>
-          <p className="text-2xl font-semibold text-green-600">{completedOrders}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500">Average Order Value</h3>
-          <p className="text-2xl font-semibold text-blue-600">{formatCurrency(averageOrderValue)}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500">Total Revenue</h3>
-          <p className="text-2xl font-semibold text-green-600">{formatCurrency(totalRevenue)}</p>
-        </div>
-      </div>
-      
-      <div>
-        {/* Filters and actions */}
-        <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search orders..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 w-full sm:w-64"
-              />
-              <FaSearch className="absolute left-3 top-3 text-gray-400" />
-            </div>
-            <Select
-              options={orderStatuses}
-              defaultValue={defaultOrderStatus}
-              setDefault={setDefaultOrderStatus}
-              keyStorage={"keyOrderStatus"}
-            />
-            <Select
-              options={paymentMethods}
-              defaultValue={defaultPaymentMethod}
-              setDefault={setDefaultPaymentMethod}
-              keyStorage={"keyPaymentMethod"}
-            />
-            <button
-              onClick={() => setShowFilter(!showFilter)}
-              className="flex items-center gap-1 border border-gray-300 bg-white px-4 py-2 rounded-md hover:bg-gray-50"
-            >
-              <FaFilter />
-              Date Filter
-            </button>
-          </div>
+      {/* Controls */}
+      <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Search 
+            placeholder="Tìm kiếm theo khách hàng..." 
+            setSearch={setSearchTerm}
+            search={searchTerm}
+          />
+          
+          <Select 
+            options={statusOptions}
+            value={statusFilter}
+            onChange={handleStatusFilterChange}
+          />
+          
           <button
-            className="button flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
             onClick={() => {
-              setIsAddModalOpen(true);
-              changeEntry(["Create new order", "Create"]);
+              setSearchTerm("");
+              setStatusFilter("all");
+              setPagination(prev => ({ ...prev, currentPage: 1 }));
             }}
+            className="px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-md border border-blue-600"
           >
-            <FaPlus />
-            New order
+            Đặt lại
           </button>
         </div>
-
-        {/* Date filter */}
-        {showFilter && (
-          <div className="mb-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by Date Range</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Start Date</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-            </div>
-            <div className="mt-3 flex justify-end">
-              <button 
-                onClick={() => { 
-                  setStartDate(""); 
-                  setEndDate("");
-                }}
-                className="text-sm text-gray-600 hover:text-red-600"
-              >
-                Clear Dates
-              </button>
-            </div>
-          </div>
-        )}
         
-        {/* Orders list display */}
-        {!orders.length ? (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <img 
-              src="https://cdn-icons-png.flaticon.com/512/4076/4076432.png" 
-              alt="No orders" 
-              className="w-24 h-24 mx-auto opacity-50"
-            />
-            <p className="text-center font-semibold text-xl mt-4 text-gray-700">
-              Không có đơn hàng nào được tìm thấy!
-            </p>
-            <p className="text-gray-500 mt-2">
-              Thử thay đổi bộ lọc hoặc tạo đơn hàng mới
-            </p>
-          </div>
-        ) : (
-          <TableOrders
-            columnNames={columnNames}
-            orders={orders}
-            onStatusChange={handleUpdateStatus}
-            onViewDetails={viewOrderDetails}
-            handleDelete={handleDelete}
-            setOpen={setIsAddModalOpen}
-            setOrderInfo={setOrderInfo}
-            changeEntry={changeEntry}
-          />
-        )}
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+        >
+          <FaPlus /> Tạo đơn hàng
+        </button>
       </div>
       
-      <AddOrderModal
-        title={entry.current.title}
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddOrder={handleAddOrder}
-        info={orderInfo}
-        setInfo={setOrderInfo}
-        Entry={entry.current.action}
+      {/* Content */}
+      {loading ? (
+        <div className="flex justify-center py-10">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+          {error}
+        </div>
+      ) : filteredOrders.length === 0 ? (
+        <div className="bg-white p-8 rounded-lg text-center shadow-sm">
+          <p className="text-gray-500">Không tìm thấy đơn hàng nào.</p>
+        </div>
+      ) : (
+        <>
+          <TableOrders
+            orders={filteredOrders}
+            onOpenDetails={handleOpenOrderDetails}
+            onUpdateStatus={handleUpdateOrderStatus}
+            onDelete={handleDeleteOrder}
+          />
+          
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="flex justify-center mt-6">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(Math.max(1, pagination.currentPage - 1))}
+                  disabled={pagination.currentPage === 1}
+                  className={`px-3 py-1 rounded ${pagination.currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                >
+                  Trước
+                </button>
+                
+                <div className="flex items-center gap-1">
+                  {[...Array(pagination.totalPages)].map((_, i) => {
+                    // Show max 5 page numbers with ellipsis
+                    if (
+                      pagination.totalPages <= 5 ||
+                      i + 1 === 1 ||
+                      i + 1 === pagination.totalPages ||
+                      (i + 1 >= pagination.currentPage - 1 && i + 1 <= pagination.currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => handlePageChange(i + 1)}
+                          className={`w-8 h-8 flex items-center justify-center rounded ${
+                            pagination.currentPage === i + 1
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                          }`}
+                        >
+                          {i + 1}
+                        </button>
+                      );
+                    } else if (
+                      (i === 1 && pagination.currentPage > 3) ||
+                      (i === pagination.totalPages - 2 && pagination.currentPage < pagination.totalPages - 2)
+                    ) {
+                      return <span key={i}>...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.currentPage + 1))}
+                  disabled={pagination.currentPage === pagination.totalPages}
+                  className={`px-3 py-1 rounded ${pagination.currentPage === pagination.totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                >
+                  Tiếp
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      
+      {/* Order Creation Modal */}
+      <AddOrderModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleCreateOrder}
       />
-
-      <OrderDetailsModal
+      
+      {/* Order Details Modal */}
+      <OrderDetailsModal 
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
-        order={selectedOrder}
+        orderDetails={orderDetails}
+        loading={loading}
       />
     </div>
   );
