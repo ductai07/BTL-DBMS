@@ -2,48 +2,120 @@ import Header from "../component/Header";
 import Select from "../component/Select";
 import { FaPlus } from "react-icons/fa";
 import TableMovie from "../component/TableMovie";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import AddMovieModal from "../component/AddMovieModal";
 import Search from "../component/Search";
 
 const Movies = () => {
   // Call api lay data
-  let [data, setData] = useState([
-    {
-      id: 1,
-      title: "The Dark Knight",
-      duration: 152,
-      genre: "Action",
-      status: "Now Showing",
-    },
-    {
-      id: 2,
-      title: "Inception",
-      duration: 148,
-      genre: "Sci-Fi",
-      status: "Coming Soon",
-    },
-    {
-      id: 3,
-      title: "Interstellar",
-      duration: 169,
-      genre: "Adventure",
-      status: "Now Showing",
-    },
-  ]);
+  let [data, setData] = useState([]);
+  const [pagination, setPagination] = useState({});
+
+  useEffect(() => {
+    const Fetch = async () => {
+      const response = await fetch("http://localhost:3000/movie");
+      const data = await response.json();
+      setData(data.data);
+      setPagination(data.pagination);
+      setCurrentPage(data.pagination.currentPage);
+      console.log(data.data);
+    };
+    Fetch();
+  }, []);
   // call api de upadate data
-  const handleDelete = (idMovie) => {
+  const handleDelete = async (idMovie) => {
     setDelete(!Delete);
     const updateData = data.filter(({ id }) => id != idMovie);
     setData(updateData);
+    // Xóa phim: http://localhost:3000/movie/delete/:id
+    try {
+      const response = await fetch(
+        `http://localhost:3000/movie/delete/${idMovie}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
   };
 
-  const handleAddMovie = (newMovie) => {
+  const handleUpdateMovie = async (editMovie) => {
+    let updatedMovies = [
+      editMovie,
+      ...data.filter((movie) => editMovie.id != movie.id),
+    ];
+    setData(updatedMovies);
+    try {
+      const response = await fetch(
+        `http://localhost:3000/movie/edit/${editMovie.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(editMovie),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+      console.log("Update successful:", data);
+    } catch (error) {
+      console.error("Error updating movie:", error);
+    }
+  };
+
+  const handleAddMovie = async (newMovie) => {
     let updatedMovies = [
       newMovie,
       ...data.filter((movie) => movie.id != newMovie.id),
     ];
     setData(updatedMovies);
+
+    // http://localhost:3000/movie/add
+    try {
+      const response = await fetch("http://localhost:3000/movie/add", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newMovie),
+      });
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const queryRef = useRef({
+    SearchKey: "",
+    SearchValue: "",
+    SortKey: "",
+    SortValue: "",
+    Page: "",
+    Limit: 10,
+  });
+
+  const handleSearch = () => {
+    queryRef.current.SearchKey = "title";
+    queryRef.current.SearchValue = search;
+    queryRef.current.Page = currentPage;
+    const queryString = new URLSearchParams(queryRef.current).toString();
+    fetch(`http://localhost:3000/movie?${queryString}`)
+      .then((response) => response.json())
+      .then((data) => {
+        setData(data.data);
+        setPagination(data.pagination);
+      });
   };
 
   // Khong lien quan
@@ -82,13 +154,12 @@ const Movies = () => {
       value: "Documentary",
     },
   ];
+  // ['Đang chiếu', 'Sắp chiếu', 'Ngừng chiếu'];
   const filmStatuses = [
-    { key: "all", value: "All Status" },
-    { key: "coming_soon", value: "Coming Soon" },
-    { key: "now_showing", value: "Now Showing" },
-    { key: "ended", value: "Ended" },
-    { key: "paused", value: "Paused" },
-    { key: "cancelled", value: "Cancelled" },
+    { key: "", value: "Tất cả" },
+    { key: "coming_soon", value: "Sắp chiếu" },
+    { key: "now_showing", value: "Đang chiếu" },
+    { key: "ended", value: "Ngừng chiếu" },
   ];
 
   const [defaultGenres, setDefaultGenres] = useState(() => {
@@ -118,14 +189,18 @@ const Movies = () => {
 
   const [Delete, setDelete] = useState(false);
   const [search, setSearch] = useState("");
-  const handleSearch = () => {
-    // .......
-  };
+
   const handleReset = () => {
     setSearch("");
     setDefaultFilmStatus(filmStatuses[0].value);
     setDefaultGenres(Genres[0].value);
+    setCurrentPage(1);
   };
+
+  const [currentPage, setCurrentPage] = useState(1);
+  useEffect(() => {
+    handleSearch();
+  }, [currentPage, search]);
 
   return (
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
@@ -170,7 +245,7 @@ const Movies = () => {
               </div>
               <div
                 className="button flex items-center justify-center hover:cursor-pointer"
-                handleSearch
+                onClick={handleSearch}
               >
                 Tìm kiếm
               </div>
@@ -199,6 +274,9 @@ const Movies = () => {
             setInfoFilm={setInfoFilm}
             changeEntry={changeEntry}
             handleDelete={handleDelete}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            totalPages={pagination.totalPages}
           />
         )}
       </div>
@@ -207,6 +285,7 @@ const Movies = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAddMovie={handleAddMovie}
+        onUpdateMovie={handleUpdateMovie}
         info={infoFilm}
         setInfo={setInfoFilm}
         Entry={entry.current.action}

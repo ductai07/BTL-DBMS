@@ -9,14 +9,10 @@ const TableMovie = ({
   setInfoFilm,
   changeEntry,
   handleDelete,
+  currentPage,
+  setCurrentPage,
+  totalPages,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(movies.length / itemsPerPage);
-
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentItems = movies.slice(startIndex, startIndex + itemsPerPage);
-
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
       <h3 className="text-lg font-semibold mb-4">Recent Transactions</h3>
@@ -31,7 +27,7 @@ const TableMovie = ({
           </tr>
         </thead>
         <tbody>
-          {currentItems.map((movie) => (
+          {movies.map((movie) => (
             <tr
               key={movie.id}
               className="border-b text-sm text-gray-700 hover:bg-gray-50"
@@ -84,14 +80,18 @@ const TableMovie = ({
           <button
             className="px-3 py-1 border rounded disabled:opacity-50"
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => prev - 1)}
+            onClick={() => {
+              setCurrentPage((prev) => prev - 1);
+            }}
           >
             Trước
           </button>
           <button
             className="px-3 py-1 border rounded disabled:opacity-50"
             disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((prev) => prev + 1)}
+            onClick={() => {
+              setCurrentPage((prev) => prev + 1);
+            }}
           >
             Sau
           </button>

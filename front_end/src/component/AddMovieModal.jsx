@@ -1,11 +1,12 @@
 // AddMovieModal.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 export default function AddMovieModal({
   title,
   isOpen,
   onClose,
   onAddMovie,
+  onUpdateMovie,
   Entry = "Add",
   info,
   setInfo,
@@ -28,7 +29,7 @@ export default function AddMovieModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onAddMovie(movie);
+    Entry === "Add" ? onAddMovie(movie) : onUpdateMovie(movie);
     setMovie({
       title: "",
       duration: "",
@@ -110,8 +111,9 @@ export default function AddMovieModal({
             required
           >
             <option value="">-- Chọn trạng thái--</option>
-            <option>Now Showing</option>
-            <option>Coming Soon</option>
+            <option value="Đang chiếu">Đang chiếu</option>
+            <option value="Sắp chiếu">Sắp chiếu</option>
+            <option value="Stopped Showing">Ngừng chiếu</option>
           </select>
           <div className="flex justify-end gap-2">
             <button

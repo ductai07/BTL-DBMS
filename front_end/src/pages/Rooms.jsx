@@ -1,146 +1,127 @@
 import Header from "../component/Header";
 import Select from "../component/Select";
 import { FaPlus } from "react-icons/fa";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AddRoom from "../component/AddRoom";
 import TableRooms from "../component/TableRooms";
 import Search from "../component/Search";
+import { ca, ro } from "date-fns/locale";
 
 const Rooms = () => {
   // Call api lay data
-  const [rooms, setRooms] = useState([
-    {
-      id: 1,
-      roomName: "Screen 1",
-      cinema: "Cinema City Downtown",
-      capacity: 180,
-      type: "Standard",
-    },
-    {
-      id: 2,
-      roomName: "VIP Room A",
-      cinema: "Megaplex Central",
-      capacity: 60,
-      type: "VIP",
-    },
-    {
-      id: 3,
-      roomName: "IMAX Theater",
-      cinema: "Star Cinema Mall",
-      capacity: 300,
-      type: "IMAX",
-    },
-    {
-      id: 4,
-      roomName: "Screen 2",
-      cinema: "Cinema City Downtown",
-      capacity: 150,
-      type: "Standard",
-    },
-    {
-      id: 5,
-      roomName: "VIP Room B",
-      cinema: "Megaplex Central",
-      capacity: 50,
-      type: "VIP",
-    },
-    {
-      id: 6,
-      roomName: "IMAX Theater 2",
-      cinema: "Star Cinema Mall",
-      capacity: 320,
-      type: "IMAX",
-    },
-    {
-      id: 7,
-      roomName: "Screen 3",
-      cinema: "Cinema City Downtown",
-      capacity: 170,
-      type: "Standard",
-    },
-    {
-      id: 8,
-      roomName: "Deluxe Room",
-      cinema: "Luxury Cinemas",
-      capacity: 100,
-      type: "VIP",
-    },
-    {
-      id: 9,
-      roomName: "Screen 4",
-      cinema: "Downtown Cinemas",
-      capacity: 160,
-      type: "Standard",
-    },
-    {
-      id: 10,
-      roomName: "Private Room",
-      cinema: "Megaplex Central",
-      capacity: 40,
-      type: "VIP",
-    },
-    {
-      id: 11,
-      roomName: "IMAX Hall",
-      cinema: "Star Cinema Mall",
-      capacity: 310,
-      type: "IMAX",
-    },
-    {
-      id: 12,
-      roomName: "Screen 5",
-      cinema: "Cinema City North",
-      capacity: 140,
-      type: "Standard",
-    },
-    {
-      id: 13,
-      roomName: "VIP Lounge",
-      cinema: "Cinema City Downtown",
-      capacity: 65,
-      type: "VIP",
-    },
-    {
-      id: 14,
-      roomName: "IMAX Galaxy",
-      cinema: "Galaxy Cineplex",
-      capacity: 350,
-      type: "IMAX",
-    },
-    {
-      id: 15,
-      roomName: "Screen 6",
-      cinema: "Megaplex Central",
-      capacity: 155,
-      type: "Standard",
-    },
-  ]);
+  const [rooms, setRooms] = useState([]);
+  const [pagination, setPagination] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const queryRef = useRef({
+    SearchKey: "",
+    SearchValue: "",
+    SortKey: "",
+    SortValue: "",
+    Page: "",
+    Limit: "",
+    cinemaId: "",
+  });
+  useEffect(() => {
+    const Fetch = async () => {
+      const response = await fetch("http://localhost:3000/room");
+      const data = await response.json();
+      setRooms(data.data);
+      console.log(data.data);
+      setPagination(data.pagination);
+    };
+    Fetch();
+  }, []);
+
   // call api de update data
-  const handleAddRoom = (newRoom) => {
+  const handleAddRoom = async (newRoom) => {
     const updateRooms = [
       newRoom,
       ...rooms.filter((room) => room.id != newRoom.id),
     ];
     setRooms(updateRooms);
-    filterRooms(updateRooms);
+    // name, type, seatCount, status, cinema_id
+    const room = {
+      name: newRoom.name,
+      type: newRoom.type,
+      seatCount: newRoom.seatCount,
+      status: newRoom.status,
+      cinema_id: newRoom.Cinema.id,
+    };
+    try {
+      const response = await fetch("http://localhost:3000/room/add", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(room),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        console.error("Error:", data.message);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const handleEditRoom = async (room) => {
+    const updateRooms = [room, ...rooms.filter((item) => item.id != room.id)];
+    setRooms(updateRooms);
+    // name, type, seatCount, status, cinema_id
+    const newRoom = {
+      name: room.name,
+      type: room.type,
+      seatCount: room.seatCount,
+      status: room.status,
+      cinema_id: room.Cinema.id,
+    };
+    try {
+      const response = await fetch(
+        `http://localhost:3000/room/edit/${room.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newRoom),
+        }
+      );
+      if (!response.ok) {
+        const data = await response.json();
+        console.error("Error:", data.message);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
   };
 
   const handleDelete = (roomId) => {
-    const updateRooms = rooms.filter((room) => room.id != roomId);
-    setRooms(updateRooms);
-    filterRooms(updateRooms);
+    fetch(`http://localhost:3000/room/delete/${roomId}`, {
+      method: "DELETE",
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Error deleting room:", errorData.message);
+          alert("Lỗi: " + errorData.message);
+          return;
+        }
+        console.log("Xóa phòng thành công!");
+        const updateRooms = rooms.filter((room) => room.id != roomId);
+        setRooms(updateRooms);
+      })
+      .catch((error) => {
+        console.error("Lỗi mạng hoặc server:", error.message);
+        alert("Lỗi mạng hoặc server: " + error.message);
+      });
   };
 
   // Khong lien quan
   const Cinemas = [
-    { key: "all", value: "All Cinemas" },
-    { key: "cinema city downtown", value: "Cinema City Downtown" },
-    { key: "megaplex central", value: "Megaplex Central" },
-    { key: "star cinema mall", value: "Star Cinema Mall" },
-    { key: "luxury cinemas", value: "Luxury Cinemas" },
-    { key: "downtown cinemas", value: "Downtown Cinemas" },
-    { key: "cinema city north", value: "Cinema City North" },
-    { key: "galaxy cineplex", value: "Galaxy Cineplex" },
+    { key: "", value: "Tất cả" },
+    { key: 1, value: "Galaxy Nguyễn Du" },
+    { key: 3, value: "BHD Star Vincom Thảo Điền" },
+    { key: 2, value: "CGV Crescent Mall" },
   ];
 
   const roomsTypes = [
@@ -154,7 +135,14 @@ const Rooms = () => {
     { key: "premium", value: "Premium" },
   ];
 
-  const columnNames = ["Room Name", "Cinema", "Capacity", "Type", "Action"];
+  const columnNames = [
+    "Room Name",
+    "Cinema",
+    "Capacity",
+    "Type",
+    "Status",
+    "Action",
+  ];
 
   const [defaultCinemas, setDefaultCinemas] = useState(
     () => localStorage.getItem("keyCinemas") || Cinemas[0].value
@@ -176,18 +164,37 @@ const Rooms = () => {
   };
 
   const [infoRoom, setInfoRoom] = useState({
-    roomName: "",
-    cinema: "",
-    capacity: "",
+    name: "",
+    Cinema: {
+      id: "",
+      name: "",
+      address: "",
+    },
+    seatCount: "",
     type: "",
     id: Date.now(),
   });
 
   const [search, setSearch] = useState("");
+  // name, type, seatCount, status, cinema_id
+  const handleSearch = async () => {
+    queryRef.current.SearchKey = "name";
+    queryRef.current.SearchValue = search;
+    queryRef.current.Page = currentPage;
+    const queryString = new URLSearchParams(queryRef.current).toString();
+    const response = await fetch(`http://localhost:3000/room?${queryString}`);
+    const data = await response.json();
+    setRooms(data.data);
+    setPagination(data.pagination);
+  };
+  useEffect(() => {
+    handleSearch();
+  }, [currentPage]);
   const handleReset = () => {
     setSearch("");
     setDefaultCinemas(Cinemas[0].value);
     setDefaultRoomTypes(roomsTypes[0].value);
+    setCurrentPage(1);
   };
 
   return (
@@ -233,7 +240,7 @@ const Rooms = () => {
               </div>
               <div
                 className="button flex items-center justify-center hover:cursor-pointer"
-                handleSearch
+                onClick={handleSearch}
               >
                 Tìm kiếm
               </div>
@@ -258,7 +265,10 @@ const Rooms = () => {
             setOpen={setIsModalOpen}
             setInfoRoom={setInfoRoom}
             changeEntry={changeEntry}
-            handleDelelte={handleDelete}
+            handleDelete={handleDelete}
+            setCurrentPage={setCurrentPage}
+            currentPage={currentPage}
+            totalPages={pagination.totalPages}
           />
         </div>
       </div>
@@ -267,6 +277,7 @@ const Rooms = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAddRoom={handleAddRoom}
+        onEditRoom={handleEditRoom}
         entry={entry.current.action}
         infoRoom={infoRoom}
         setInfoRoom={setInfoRoom}
