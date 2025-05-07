@@ -27,47 +27,48 @@ const TableMovie = ({
           </tr>
         </thead>
         <tbody>
-          {movies.map((movie) => (
-            <tr
-              key={movie.id}
-              className="border-b text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <td className="py-3">{movie.title}</td>
-              <td>{movie.duration}</td>
-              <td>{movie.genre}</td>
-              <td>
-                <span
-                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    movie.status === "Now Showing"
-                      ? "bg-gray-200 text-green-600"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
-                >
-                  {movie.status}
-                </span>
-              </td>
-              <td>
-                <span className="flex gap-2">
+          {movies &&
+            movies.map((movie) => (
+              <tr
+                key={movie.id}
+                className="border-b text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <td className="py-3">{movie.title}</td>
+                <td>{movie.duration}</td>
+                <td>{movie.genre}</td>
+                <td>
                   <span
-                    className="hover:cursor-pointer"
-                    onClick={() => {
-                      setOpen(true);
-                      changeEntry(["Edit movie", "Edit"]);
-                      setInfoFilm(movie);
-                    }}
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      movie.status === "Now Showing"
+                        ? "bg-gray-200 text-green-600"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}
                   >
-                    <FaEdit />
+                    {movie.status}
                   </span>
-                  <span
-                    className="hover:cursor-pointer"
-                    onClick={() => handleDelete(movie.id)}
-                  >
-                    <MdDeleteForever size={16} />
+                </td>
+                <td>
+                  <span className="flex gap-2">
+                    <span
+                      className="hover:cursor-pointer"
+                      onClick={() => {
+                        setOpen(true);
+                        changeEntry(["Edit movie", "Edit"]);
+                        setInfoFilm(movie);
+                      }}
+                    >
+                      <FaEdit />
+                    </span>
+                    <span
+                      className="hover:cursor-pointer"
+                      onClick={() => handleDelete(movie.id)}
+                    >
+                      <MdDeleteForever size={16} />
+                    </span>
                   </span>
-                </span>
-              </td>
-            </tr>
-          ))}
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
 

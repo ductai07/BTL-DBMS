@@ -27,38 +27,39 @@ const TableRooms = ({
           </tr>
         </thead>
         <tbody>
-          {rooms.map((room) => (
-            <tr
-              key={room.id}
-              className="border-b text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <td className="py-3">{room.name}</td>
-              <td>{room.Cinema.name}</td>
-              <td>{room.seatCount}</td>
-              <td>{room.type}</td>
-              <td>{room.status}</td>
-              <td>
-                <span className="flex gap-2">
-                  <span
-                    className="hover:cursor-pointer"
-                    onClick={() => {
-                      setOpen(true);
-                      setInfoRoom(room);
-                      changeEntry(["Edit room", "Edit"]);
-                    }}
-                  >
-                    <FaEdit />
+          {rooms &&
+            rooms.map((room) => (
+              <tr
+                key={room.id}
+                className="border-b text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <td className="py-3">{room.name}</td>
+                <td>{room.Cinema.name}</td>
+                <td>{room.seatCount}</td>
+                <td>{room.type}</td>
+                <td>{room.status}</td>
+                <td>
+                  <span className="flex gap-2">
+                    <span
+                      className="hover:cursor-pointer"
+                      onClick={() => {
+                        setOpen(true);
+                        setInfoRoom(room);
+                        changeEntry(["Edit room", "Edit"]);
+                      }}
+                    >
+                      <FaEdit />
+                    </span>
+                    <span
+                      className="hover:cursor-pointer"
+                      onClick={() => handleDelete(room.id)}
+                    >
+                      <MdDeleteForever size={16} />
+                    </span>
                   </span>
-                  <span
-                    className="hover:cursor-pointer"
-                    onClick={() => handleDelete(room.id)}
-                  >
-                    <MdDeleteForever size={16} />
-                  </span>
-                </span>
-              </td>
-            </tr>
-          ))}
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
 

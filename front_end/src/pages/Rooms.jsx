@@ -5,13 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import AddRoom from "../component/AddRoom";
 import TableRooms from "../component/TableRooms";
 import Search from "../component/Search";
-import { ca, ro } from "date-fns/locale";
 
 const Rooms = () => {
-  // Call api lay data
   const [rooms, setRooms] = useState([]);
   const [pagination, setPagination] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState("");
+
   const queryRef = useRef({
     SearchKey: "",
     SearchValue: "",
@@ -21,25 +21,25 @@ const Rooms = () => {
     Limit: "",
     cinemaId: "",
   });
+
+  const Fetch = async () => {
+    const response = await fetch("http://localhost:3000/room");
+    const data = await response.json();
+    setRooms(data.data);
+    setPagination(data.pagination);
+  };
+
   useEffect(() => {
-    const Fetch = async () => {
-      const response = await fetch("http://localhost:3000/room");
-      const data = await response.json();
-      setRooms(data.data);
-      console.log(data.data);
-      setPagination(data.pagination);
-    };
     Fetch();
   }, []);
 
-  // call api de update data
   const handleAddRoom = async (newRoom) => {
     const updateRooms = [
       newRoom,
-      ...rooms.filter((room) => room.id != newRoom.id),
+      ...rooms.filter((room) => room.id !== newRoom.id),
     ];
     setRooms(updateRooms);
-    // name, type, seatCount, status, cinema_id
+
     const room = {
       name: newRoom.name,
       type: newRoom.type,
@@ -47,6 +47,7 @@ const Rooms = () => {
       status: newRoom.status,
       cinema_id: newRoom.Cinema.id,
     };
+
     try {
       const response = await fetch("http://localhost:3000/room/add", {
         method: "POST",
@@ -65,9 +66,9 @@ const Rooms = () => {
   };
 
   const handleEditRoom = async (room) => {
-    const updateRooms = [room, ...rooms.filter((item) => item.id != room.id)];
+    const updateRooms = [room, ...rooms.filter((item) => item.id !== room.id)];
     setRooms(updateRooms);
-    // name, type, seatCount, status, cinema_id
+
     const newRoom = {
       name: room.name,
       type: room.type,
@@ -75,6 +76,7 @@ const Rooms = () => {
       status: room.status,
       cinema_id: room.Cinema.id,
     };
+
     try {
       const response = await fetch(
         `http://localhost:3000/room/edit/${room.id}`,
@@ -106,8 +108,7 @@ const Rooms = () => {
           alert("Lỗi: " + errorData.message);
           return;
         }
-        console.log("Xóa phòng thành công!");
-        const updateRooms = rooms.filter((room) => room.id != roomId);
+        const updateRooms = rooms.filter((room) => room.id !== roomId);
         setRooms(updateRooms);
       })
       .catch((error) => {
@@ -116,7 +117,6 @@ const Rooms = () => {
       });
   };
 
-  // Khong lien quan
   const Cinemas = [
     { key: "", value: "Tất cả" },
     { key: 1, value: "Galaxy Nguyễn Du" },
@@ -152,10 +152,8 @@ const Rooms = () => {
   );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const entry = useRef({
-    title: "",
-    action: "",
-  });
+  const entry = useRef({ title: "", action: "" });
+
   const changeEntry = (newEntry) => {
     entry.current = {
       title: newEntry[0],
@@ -175,8 +173,6 @@ const Rooms = () => {
     id: Date.now(),
   });
 
-  const [search, setSearch] = useState("");
-  // name, type, seatCount, status, cinema_id
   const handleSearch = async () => {
     queryRef.current.Page = currentPage;
     const queryString = new URLSearchParams(queryRef.current).toString();
@@ -185,99 +181,104 @@ const Rooms = () => {
     setRooms(data.data);
     setPagination(data.pagination);
   };
+
   useEffect(() => {
-    console.log("dc", queryRef.current.SearchKey);
-    console.log("dc", queryRef.current.SearchValue);
     handleSearch();
-  }, [currentPage, search, defaultCinemas, defaultRoomTypes]);
+  }, [currentPage, defaultCinemas, defaultRoomTypes, search]);
+
   const handleReset = () => {
     setSearch("");
     setDefaultCinemas(Cinemas[0].value);
     setDefaultRoomTypes(roomsTypes[0].value);
     setCurrentPage(1);
+    queryRef.current = {
+      SearchKey: "",
+      SearchValue: "",
+      SortKey: "",
+      SortValue: "",
+      Page: "",
+      Limit: "",
+      cinemaId: "",
+    };
   };
 
   return (
-    <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
-      <Header title={"Cinema Management"} />
-      <div>
-        <div className="flex justify-between mb-6  bg-white p-5 shadow-md rounded-xl">
-          <div>
-            <div className="flex gap-2 mb-4">
-              <div>
-                <div className="font-medium pb-4">Mã phòng</div>
-                <Search
-                  placeholder={"Nhập tên phòng"}
-                  setSearch={setSearch}
-                  search={search}
-                  keySearch={"name"}
-                  queryRef={queryRef}
-                />
-              </div>
-              <div>
-                <div className="font-medium pb-4">Rạp</div>
-                <Select
-                  options={Cinemas}
-                  defaultValue={defaultCinemas}
-                  setDefault={setDefaultCinemas}
-                  keyStorage={"keyCinemas"}
-                  queryRef={queryRef}
-                  keySearch={"cinemaId"}
-                />
-              </div>
-              <div>
-                <div className="font-medium pb-4">Loại phòng</div>
-                <Select
-                  options={roomsTypes}
-                  defaultValue={defaultRoomTypes}
-                  setDefault={setDefaultRoomTypes}
-                  keyStorage={"keyRoomTypes"}
-                  queryRef={queryRef}
-                  keySearch={"type"}
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div
-                className="button !bg-white !text-black border border-black flex items-center justify-center hover:cursor-pointer"
-                onClick={handleReset}
-              >
-                Đặt lại
-              </div>
-              {/* <div
-                className="button flex items-center justify-center hover:cursor-pointer"
-                onClick={handleSearch}
-              >
-                Tìm kiếm
-              </div> */}
-            </div>
-          </div>
-
-          <button
-            className="button flex items-center gap-1"
-            onClick={() => {
-              setIsModalOpen(true);
-              changeEntry(["Add room", "Add"]);
-            }}
-          >
-            <FaPlus />
-            Add Room
-          </button>
-        </div>
+    <>
+      <div className="w-full h-[100vh] bg-neutral-100 p-5 overflow-auto">
+        <Header title={"Cinema Management"} />
         <div>
-          <TableRooms
-            columnNames={columnNames}
-            rooms={rooms}
-            setOpen={setIsModalOpen}
-            setInfoRoom={setInfoRoom}
-            changeEntry={changeEntry}
-            handleDelete={handleDelete}
-            setCurrentPage={setCurrentPage}
-            currentPage={currentPage}
-            totalPages={pagination?.totalPages}
-          />
+          <div className="flex justify-between mb-6 bg-white p-5 shadow-md rounded-xl">
+            <div>
+              <div className="flex gap-2 mb-4">
+                <div>
+                  <div className="font-medium pb-4">Mã phòng</div>
+                  <Search
+                    placeholder={"Nhập tên phòng"}
+                    setSearch={setSearch}
+                    search={search}
+                    keySearch={"name"}
+                    queryRef={queryRef}
+                  />
+                </div>
+                <div>
+                  <div className="font-medium pb-4">Rạp</div>
+                  <Select
+                    options={Cinemas}
+                    defaultValue={defaultCinemas}
+                    setDefault={setDefaultCinemas}
+                    keyStorage={"keyCinemas"}
+                    queryRef={queryRef}
+                    keySearch={"cinemaId"}
+                    // cinemaId={true}
+                  />
+                </div>
+                <div>
+                  <div className="font-medium pb-4">Loại phòng</div>
+                  <Select
+                    options={roomsTypes}
+                    defaultValue={defaultRoomTypes}
+                    setDefault={setDefaultRoomTypes}
+                    keyStorage={"keyRoomTypes"}
+                    queryRef={queryRef}
+                    keySearch={"type"}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <div
+                  className="button !bg-white !text-black border border-black flex items-center justify-center hover:cursor-pointer"
+                  onClick={handleReset}
+                >
+                  Đặt lại
+                </div>
+              </div>
+            </div>
+            <button
+              className="button flex items-center gap-1"
+              onClick={() => {
+                setIsModalOpen(true);
+                changeEntry(["Add room", "Add"]);
+              }}
+            >
+              <FaPlus />
+              Add Room
+            </button>
+          </div>
         </div>
+
+        <TableRooms
+          columnNames={columnNames}
+          rooms={rooms}
+          setOpen={setIsModalOpen}
+          setInfoRoom={setInfoRoom}
+          changeEntry={changeEntry}
+          handleDelete={handleDelete}
+          setCurrentPage={setCurrentPage}
+          currentPage={currentPage}
+          totalPages={pagination?.totalPages}
+        />
       </div>
+
       <AddRoom
         title={entry.current.title}
         isOpen={isModalOpen}
@@ -288,7 +289,7 @@ const Rooms = () => {
         infoRoom={infoRoom}
         setInfoRoom={setInfoRoom}
       />
-    </div>
+    </>
   );
 };
 

@@ -12,12 +12,13 @@ const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize({
   dialect: 'mssql',
-  host: 'localhost', // or '.' for local SQL Server
-  database: 'QL', // your database name
+  host: 'CHINHPHAM', // or '.' for local SQL Server
+  database: 'LMQ2', // your database name
   username: 'sa', // SQL Server sa account
-  password: '111111', // your password
+  password: '2411', // your password
   dialectOptions: {
     options: {
+      instanceName: 'SQLEXPRESS',
       encrypt: false,
       trustServerCertificate: true,
       requestTimeout: 30000
