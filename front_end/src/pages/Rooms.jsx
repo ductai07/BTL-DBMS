@@ -12,7 +12,7 @@ const Rooms = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [cinemaOptions, setCinemaOptions] = useState([
-    { key: "", value: "Tất cả" }
+    { key: "", value: "Tất cả" },
   ]);
   const queryRef = useRef({
     SearchKey: "",
@@ -24,7 +24,7 @@ const Rooms = () => {
     cinemaId: "",
     type: "",
   });
-  
+
   // Fetch cinema options
   useEffect(() => {
     const fetchCinemas = async () => {
@@ -34,25 +34,25 @@ const Rooms = () => {
           throw new Error("Failed to fetch cinemas");
         }
         const data = await response.json();
-        
+
         // Format data for dropdown
         const options = [
           { key: "", value: "Tất cả" },
-          ...(data.data || []).map(cinema => ({
+          ...(data.data || []).map((cinema) => ({
             key: cinema.id,
-            value: cinema.name
-          }))
+            value: cinema.name,
+          })),
         ];
-        
+
         setCinemaOptions(options);
       } catch (error) {
         console.error("Error fetching cinemas:", error);
       }
     };
-    
+
     fetchCinemas();
   }, []);
-  
+
   // Fetch initial room data
   useEffect(() => {
     const fetchRooms = async () => {
@@ -68,7 +68,7 @@ const Rooms = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchRooms();
   }, []);
 
@@ -213,11 +213,11 @@ const Rooms = () => {
       const queryString = new URLSearchParams(queryRef.current).toString();
       console.log("Searching with query:", queryString);
       const response = await fetch(`http://localhost:3000/room?${queryString}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       setRooms(data.data);
       setPagination(data.pagination);
@@ -227,7 +227,6 @@ const Rooms = () => {
       setIsLoading(false);
     }
   };
-
 
   useEffect(() => {
     handleSearch();
@@ -243,14 +242,14 @@ const Rooms = () => {
       Page: 1,
       Limit: 10,
       cinemaId: "",
-      type: ""
+      type: "",
     };
-    
+
     setSearch("");
     setDefaultCinemas(cinemaOptions[0].value);
     setDefaultRoomTypes(roomsTypes[0].value);
     setCurrentPage(1);
-    
+
     // Trigger a new search with reset parameters
     handleSearch();
   };
@@ -324,9 +323,11 @@ const Rooms = () => {
             </div>
           ) : rooms.length === 0 ? (
             <div className="bg-white p-8 rounded-lg text-center shadow-md">
-              <p className="text-gray-500">Không tìm thấy phòng nào phù hợp với tìm kiếm.</p>
-              <button 
-                onClick={handleReset} 
+              <p className="text-gray-500">
+                Không tìm thấy phòng nào phù hợp với tìm kiếm.
+              </p>
+              <button
+                onClick={handleReset}
                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Xem tất cả phòng
@@ -358,7 +359,7 @@ const Rooms = () => {
         infoRoom={infoRoom}
         setInfoRoom={setInfoRoom}
       />
-    </>
+    </div>
   );
 };
 
