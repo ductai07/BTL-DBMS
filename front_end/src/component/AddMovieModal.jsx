@@ -1,5 +1,4 @@
-// AddMovieModal.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function AddMovieModal({
   title,
@@ -12,42 +11,71 @@ export default function AddMovieModal({
   setInfo,
 }) {
   const [movie, setMovie] = useState({
-    title: "",
-    duration: "",
-    genre: "",
-    status: "",
     id: Date.now(),
+    title: "",
+    genre: "",
+    duration: "",
+    releaseDate: "",
+    poster: "",
+    trailer: "",
+    description: "",
+    ageRating: "",
+    status: "",
+    director: "",
+    mainActor: "",
+    language: "",
   });
 
   useEffect(() => {
-    setMovie(info);
+    setMovie(
+      info || {
+        id: Date.now(),
+        title: "",
+        genre: "",
+        duration: "",
+        releaseDate: "",
+        poster: "",
+        trailer: "",
+        description: "",
+        ageRating: "",
+        status: "",
+        director: "",
+        mainActor: "",
+        language: "",
+      }
+    );
   }, [info]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setMovie({ ...movie, [name]: value });
+    setMovie((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     Entry === "Add" ? onAddMovie(movie) : onUpdateMovie(movie);
-    setMovie({
-      title: "",
-      duration: "",
-      genre: "",
-      status: "",
-      id: Date.now(),
-    });
-    closeWindow();
-  };
-  const closeWindow = () => {
-    setInfo({
-      title: "",
-      duration: "",
-      genre: "",
-      status: "",
-      id: Date.now(),
-    });
+    resetForm();
     onClose();
+  };
+
+  const resetForm = () => {
+    onClose();
+    setInfo({});
+    setMovie({
+      id: Date.now(),
+      title: "",
+      genre: "",
+      duration: "",
+      releaseDate: "",
+      poster: "",
+      trailer: "",
+      description: "",
+      ageRating: "",
+      status: "",
+      director: "",
+      mainActor: "",
+      language: "",
+    });
   };
 
   if (!isOpen) return null;
@@ -55,20 +83,15 @@ export default function AddMovieModal({
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
-      onClick={() => {
-        closeWindow();
-      }}
+      onClick={resetForm}
     >
       <div
-        className="bg-white p-6 rounded-xl shadow-xl w-96"
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
+        className="bg-white p-6 rounded-xl shadow-xl w-[600px] max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-bold mb-4">{title}</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
-            autoFocus
             type="text"
             name="title"
             placeholder="Title"
@@ -86,15 +109,78 @@ export default function AddMovieModal({
             className="w-full border p-2 rounded"
             required
           />
+          <input
+            type="date"
+            name="releaseDate"
+            value={movie.releaseDate}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+          />
+          <input
+            type="text"
+            name="poster"
+            placeholder="Poster URL"
+            value={movie.poster}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+          />
+          <input
+            type="text"
+            name="trailer"
+            placeholder="Trailer URL"
+            value={movie.trailer}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+          />
+          <textarea
+            name="description"
+            placeholder="Description"
+            value={movie.description}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+            rows={3}
+          />
+          <input
+            type="text"
+            name="ageRating"
+            placeholder="Age Rating (e.g. PG-13)"
+            value={movie.ageRating}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+          />
+          <input
+            type="text"
+            name="director"
+            placeholder="Director"
+            value={movie.director}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+          />
+          <input
+            type="text"
+            name="mainActor"
+            placeholder="Main Actor"
+            value={movie.mainActor}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+          />
+          <input
+            type="text"
+            name="language"
+            placeholder="Language"
+            value={movie.language}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+          />
 
           <select
             name="genre"
             value={movie.genre}
-            className="w-full border p-2 rounded"
             onChange={handleChange}
+            className="w-full border p-2 rounded"
             required
           >
-            <option value="">-- Chọn thể loại--</option>
+            <option value="">-- Chọn thể loại --</option>
             <option value="Action">Action</option>
             <option value="Comedy">Comedy</option>
             <option value="Drama">Drama</option>
@@ -103,6 +189,7 @@ export default function AddMovieModal({
             <option value="Romance">Romance</option>
             <option value="Documentary">Documentary</option>
           </select>
+
           <select
             name="status"
             value={movie.status}
@@ -110,15 +197,16 @@ export default function AddMovieModal({
             className="w-full border p-2 rounded"
             required
           >
-            <option value="">-- Chọn trạng thái--</option>
+            <option value="">-- Chọn trạng thái --</option>
             <option value="Đang chiếu">Đang chiếu</option>
             <option value="Sắp chiếu">Sắp chiếu</option>
             <option value="Stopped Showing">Ngừng chiếu</option>
           </select>
+
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={resetForm}
               className="w-24 px-3 py-1 bg-gray-300 rounded"
             >
               Cancel

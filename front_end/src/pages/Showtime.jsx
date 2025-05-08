@@ -15,26 +15,32 @@ const Showtime = () => {
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
-    pageSize: 20,  // Display 20 showtimes per page
-    total: 0
+    pageSize: 5, // Display 20 showtimes per page
+    total: 0,
   });
-  
+
   // Filters
   const [movieFilter, setMovieFilter] = useState("all");
   const [cinemaFilter, setCinemaFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  
+
   // Options for filters
-  const [movieOptions, setMovieOptions] = useState([{ key: "all", value: "Tất cả phim" }]);
-  const [cinemaOptions, setCinemaOptions] = useState([{ key: "all", value: "Tất cả rạp" }]);
-  const [dateOptions, setDateOptions] = useState([{ key: "all", value: "Tất cả ngày" }]);
-  
+  const [movieOptions, setMovieOptions] = useState([
+    { key: "all", value: "Tất cả phim" },
+  ]);
+  const [cinemaOptions, setCinemaOptions] = useState([
+    { key: "all", value: "Tất cả rạp" },
+  ]);
+  const [dateOptions, setDateOptions] = useState([
+    { key: "all", value: "Tất cả ngày" },
+  ]);
+
   const statusOptions = [
     { key: "all", value: "Tất cả trạng thái" },
     { key: "Đang chiếu", value: "Đang chiếu" },
     { key: "Sắp chiếu", value: "Sắp chiếu" },
-    { key: "Đã chiếu", value: "Đã chiếu" }
+    { key: "Đã chiếu", value: "Đã chiếu" },
   ];
 
   // Fetch showtimes from the API
@@ -46,11 +52,11 @@ const Showtime = () => {
       console.log("Fetching showtimes from:", url);
       
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log("Showtime data received:", data);
       
@@ -61,7 +67,7 @@ const Showtime = () => {
         currentPage: data.pagination?.currentPage || 1,
         totalPages: data.pagination?.totalPages || 1,
         pageSize: pagination.pageSize,
-        total: data.pagination?.total || 0
+        total: data.pagination?.total || 0,
       });
     } catch (err) {
       console.error("Error fetching showtimes:", err);
@@ -75,41 +81,41 @@ const Showtime = () => {
   const loadFilterOptions = async () => {
     try {
       // Load movies
-      const moviesResponse = await fetch('http://localhost:3000/movie');
+      const moviesResponse = await fetch("http://localhost:3000/movie");
       if (moviesResponse.ok) {
         const moviesData = await moviesResponse.json();
         setMovieOptions([
           { key: "all", value: "Tất cả phim" },
-          ...(moviesData.data || []).map(movie => ({
+          ...(moviesData.data || []).map((movie) => ({
             key: movie.id.toString(),
-            value: movie.title
-          }))
+            value: movie.title,
+          })),
         ]);
       }
-      
+
       // Load cinemas
-      const cinemasResponse = await fetch('http://localhost:3000/cinema');
+      const cinemasResponse = await fetch("http://localhost:3000/cinema");
       if (cinemasResponse.ok) {
         const cinemasData = await cinemasResponse.json();
         setCinemaOptions([
           { key: "all", value: "Tất cả rạp" },
-          ...(cinemasData.data || []).map(cinema => ({
+          ...(cinemasData.data || []).map((cinema) => ({
             key: cinema.id.toString(),
-            value: cinema.name
-          }))
+            value: cinema.name,
+          })),
         ]);
       }
-      
+
       // Load showtime dates
-      const datesResponse = await fetch('http://localhost:3000/showtime/dates');
+      const datesResponse = await fetch("http://localhost:3000/showtime/dates");
       if (datesResponse.ok) {
         const datesData = await datesResponse.json();
         setDateOptions([
           { key: "all", value: "Tất cả ngày" },
-          ...(datesData.data || []).map(date => ({
+          ...(datesData.data || []).map((date) => ({
             key: date,
-            value: formatDate(date)
-          }))
+            value: formatDate(date),
+          })),
         ]);
       }
     } catch (err) {
@@ -120,7 +126,7 @@ const Showtime = () => {
   // Format date (YYYY-MM-DD to DD/MM/YYYY)
   const formatDate = (dateString) => {
     if (!dateString) return "";
-    const parts = dateString.split('-');
+    const parts = dateString.split("-");
     if (parts.length === 3) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
@@ -135,27 +141,33 @@ const Showtime = () => {
   // Fetch showtimes when filters or pagination changes
   useEffect(() => {
     fetchShowtimes();
-  }, [pagination.currentPage, movieFilter, cinemaFilter, dateFilter, statusFilter]);
+  }, [
+    pagination.currentPage,
+    movieFilter,
+    cinemaFilter,
+    dateFilter,
+    statusFilter,
+  ]);
 
   // Handle filter changes
   const handleFilterChange = (filterName, value) => {
     // Reset to page 1 when filters change
-    setPagination(prev => ({
+    setPagination((prev) => ({
       ...prev,
-      currentPage: 1
+      currentPage: 1,
     }));
-    
+
     switch (filterName) {
-      case 'movie':
+      case "movie":
         setMovieFilter(value);
         break;
-      case 'cinema':
+      case "cinema":
         setCinemaFilter(value);
         break;
-      case 'date':
+      case "date":
         setDateFilter(value);
         break;
-      case 'status':
+      case "status":
         setStatusFilter(value);
         break;
       default:
@@ -165,9 +177,9 @@ const Showtime = () => {
 
   // Handle page change
   const handlePageChange = (newPage) => {
-    setPagination(prev => ({
+    setPagination((prev) => ({
       ...prev,
-      currentPage: newPage
+      currentPage: newPage,
     }));
   };
 
@@ -176,15 +188,20 @@ const Showtime = () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa lịch chiếu này không?")) {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:3000/showtime/delete/${showtimeId}`, {
-          method: 'DELETE'
-        });
-        
+        const response = await fetch(
+          `http://localhost:3000/showtime/delete/${showtimeId}`,
+          {
+            method: "DELETE",
+          }
+        );
+
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+          throw new Error(
+            errorData.message || `HTTP error! status: ${response.status}`
+          );
         }
-        
+
         // Re-fetch showtimes
         fetchShowtimes();
         alert("Xóa lịch chiếu thành công!");
@@ -202,29 +219,32 @@ const Showtime = () => {
     try {
       setLoading(true);
       let response;
-      
+
       if (showtimeData.id) {
         // Edit existing showtime
-        response = await fetch(`http://localhost:3000/showtime/edit/${showtimeData.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            movie_id: showtimeData.movieId,
-            room_id: showtimeData.roomId,
-            showDate: showtimeData.showDate,
-            startTime: showtimeData.startTime,
-            price: showtimeData.price,
-            status: showtimeData.status
-          })
-        });
+        response = await fetch(
+          `http://localhost:3000/showtime/edit/${showtimeData.id}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              movie_id: showtimeData.movieId,
+              room_id: showtimeData.roomId,
+              showDate: showtimeData.showDate,
+              startTime: showtimeData.startTime,
+              price: showtimeData.price,
+              status: showtimeData.status,
+            }),
+          }
+        );
       } else {
         // Add new showtime
-        response = await fetch('http://localhost:3000/showtime/add', {
-          method: 'POST',
+        response = await fetch("http://localhost:3000/showtime/add", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             movie_id: showtimeData.movieId,
@@ -232,20 +252,26 @@ const Showtime = () => {
             showDate: showtimeData.showDate,
             startTime: showtimeData.startTime,
             price: showtimeData.price,
-            status: showtimeData.status
-          })
+            status: showtimeData.status,
+          }),
         });
       }
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
-      
+
       // Re-fetch showtimes
       fetchShowtimes();
       setIsModalOpen(false);
-      alert(showtimeData.id ? "Cập nhật lịch chiếu thành công!" : "Thêm lịch chiếu thành công!");
+      alert(
+        showtimeData.id
+          ? "Cập nhật lịch chiếu thành công!"
+          : "Thêm lịch chiếu thành công!"
+      );
     } catch (err) {
       console.error("Error saving showtime:", err);
       alert(`Không thể lưu lịch chiếu: ${err.message}`);
@@ -260,15 +286,15 @@ const Showtime = () => {
     setCinemaFilter("all");
     setDateFilter("all");
     setStatusFilter("all");
-    setPagination(prev => ({
+    setPagination((prev) => ({
       ...prev,
-      currentPage: 1
+      currentPage: 1,
     }));
   };
 
   // Reference for modal actions
   const entry = useRef({ title: "Add new showtime", action: "Add" });
-  
+
   // Change modal entry
   const changeEntry = (value) => {
     entry.current = {
@@ -277,51 +303,171 @@ const Showtime = () => {
     };
   };
 
+  // Generate pagination buttons
+  const renderPaginationButtons = () => {
+    // If there's only one page or no pages, don't render pagination
+    if (pagination.totalPages <= 1) {
+      return null;
+    }
+
+    // Calculate the range of page numbers to display
+    const pageNumbers = [];
+    let startPage, endPage;
+
+    if (pagination.totalPages <= 5) {
+      // If we have 5 or fewer pages, show all pages
+      startPage = 1;
+      endPage = pagination.totalPages;
+    } else {
+      // More than 5 pages, we need to determine which ones to show
+      if (pagination.currentPage <= 3) {
+        // Near the beginning
+        startPage = 1;
+        endPage = 5;
+      } else if (pagination.currentPage >= pagination.totalPages - 2) {
+        // Near the end
+        startPage = pagination.totalPages - 4;
+        endPage = pagination.totalPages;
+      } else {
+        // Somewhere in the middle
+        startPage = pagination.currentPage - 2;
+        endPage = pagination.currentPage + 2;
+      }
+    }
+
+    // Generate the page number buttons
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(
+        <button
+          key={`page-${i}`}
+          onClick={() => handlePageChange(i)}
+          className={`w-8 h-8 flex items-center justify-center rounded ${
+            pagination.currentPage === i
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    return (
+      <div className="flex justify-center mt-6">
+        <div className="flex items-center gap-2">
+          {/* First Page Button */}
+          {pagination.currentPage > 3 && pagination.totalPages > 5 && (
+            <>
+              <button
+                onClick={() => handlePageChange(1)}
+                className="w-8 h-8 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 text-gray-700"
+              >
+                1
+              </button>
+              {pagination.currentPage > 4 && <span className="px-1">...</span>}
+            </>
+          )}
+
+          {/* Previous Button */}
+          <button
+            onClick={() =>
+              handlePageChange(Math.max(1, pagination.currentPage - 1))
+            }
+            disabled={pagination.currentPage === 1}
+            className={`px-3 py-1 rounded ${
+              pagination.currentPage === 1
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+            }`}
+          >
+            Trước
+          </button>
+
+          {/* Page Numbers */}
+          <div className="flex items-center gap-1">{pageNumbers}</div>
+
+          {/* Next Button */}
+          <button
+            onClick={() =>
+              handlePageChange(
+                Math.min(pagination.totalPages, pagination.currentPage + 1)
+              )
+            }
+            disabled={pagination.currentPage === pagination.totalPages}
+            className={`px-3 py-1 rounded ${
+              pagination.currentPage === pagination.totalPages
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+            }`}
+          >
+            Tiếp
+          </button>
+
+          {/* Last Page Button */}
+          {pagination.currentPage < pagination.totalPages - 2 &&
+            pagination.totalPages > 5 && (
+              <>
+                {pagination.currentPage < pagination.totalPages - 3 && (
+                  <span className="px-1">...</span>
+                )}
+                <button
+                  onClick={() => handlePageChange(pagination.totalPages)}
+                  className="w-8 h-8 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 text-gray-700"
+                >
+                  {pagination.totalPages}
+                </button>
+              </>
+            )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <Header title="Quản lý lịch chiếu" />
-      
+
       {/* Controls */}
       <div className="bg-white p-5 rounded-xl shadow-md mb-6">
         <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
           <div className="flex flex-wrap items-center gap-3">
             <div>
               <div className="font-medium mb-2">Phim</div>
-              <Select 
+              <Select
                 options={movieOptions}
                 value={movieFilter}
-                onChange={(value) => handleFilterChange('movie', value)}
+                onChange={(value) => handleFilterChange("movie", value)}
               />
             </div>
-            
+
             <div>
               <div className="font-medium mb-2">Rạp</div>
-              <Select 
+              <Select
                 options={cinemaOptions}
                 value={cinemaFilter}
-                onChange={(value) => handleFilterChange('cinema', value)}
+                onChange={(value) => handleFilterChange("cinema", value)}
               />
             </div>
-            
+
             <div>
               <div className="font-medium mb-2">Ngày chiếu</div>
-              <Select 
+              <Select
                 options={dateOptions}
                 value={dateFilter}
-                onChange={(value) => handleFilterChange('date', value)}
+                onChange={(value) => handleFilterChange("date", value)}
               />
             </div>
-            
+
             <div>
               <div className="font-medium mb-2">Trạng thái</div>
-              <Select 
+              <Select
                 options={statusOptions}
                 value={statusFilter}
-                onChange={(value) => handleFilterChange('status', value)}
+                onChange={(value) => handleFilterChange("status", value)}
               />
             </div>
           </div>
-          
+
           <button
             onClick={() => {
               setInfoShowTime({});
@@ -333,7 +479,7 @@ const Showtime = () => {
             <FaPlus /> Thêm lịch chiếu
           </button>
         </div>
-        
+
         <div className="flex gap-2">
           <div
             className="button !bg-white !text-black border border-black flex items-center justify-center hover:cursor-pointer"
@@ -349,7 +495,7 @@ const Showtime = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Content */}
       {loading ? (
         <div className="flex justify-center py-10">
@@ -393,7 +539,7 @@ const Showtime = () => {
                     if (pagination.totalPages > 0) {
                       pages.push(
                         <button
-                          key="page-1"
+                          key={1}
                           onClick={() => handlePageChange(1)}
                           className={`w-8 h-8 flex items-center justify-center rounded ${
                             pagination.currentPage === 1
@@ -408,7 +554,7 @@ const Showtime = () => {
                     
                     // Add ellipsis if needed
                     if (pagination.currentPage > 3) {
-                      pages.push(<span key="ellipsis-1">...</span>);
+                      pages.push(<span key="ellipsis1">...</span>);
                     }
                     
                     // Add pages around current page
@@ -416,7 +562,7 @@ const Showtime = () => {
                       if (i > 1 && i < pagination.totalPages) {
                         pages.push(
                           <button
-                            key={`page-${i}`}
+                            key={i}
                             onClick={() => handlePageChange(i)}
                             className={`w-8 h-8 flex items-center justify-center rounded ${
                               pagination.currentPage === i
@@ -432,14 +578,14 @@ const Showtime = () => {
                     
                     // Add ellipsis if needed
                     if (pagination.currentPage < pagination.totalPages - 2) {
-                      pages.push(<span key="ellipsis-2">...</span>);
+                      pages.push(<span key="ellipsis2">...</span>);
                     }
                     
                     // Always show last page if there are multiple pages
                     if (pagination.totalPages > 1) {
                       pages.push(
                         <button
-                          key={`page-${pagination.totalPages}`}
+                          key={pagination.totalPages}
                           onClick={() => handlePageChange(pagination.totalPages)}
                           className={`w-8 h-8 flex items-center justify-center rounded ${
                             pagination.currentPage === pagination.totalPages
@@ -468,7 +614,7 @@ const Showtime = () => {
           )}
         </>
       )}
-      
+
       {/* Showtime Modal */}
       <AddShowTimeModal
         title={entry.current?.title || "Add new showtime"}

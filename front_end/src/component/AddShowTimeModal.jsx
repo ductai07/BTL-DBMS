@@ -7,7 +7,11 @@ const AddShowTimeModal = ({
   onAddShowtime,
   info,
   setInfo,
+<<<<<<< HEAD
   Entry = "Add"
+=======
+  Entry = "Add",
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
 }) => {
   const [formData, setFormData] = useState({
     id: "",
@@ -16,19 +20,31 @@ const AddShowTimeModal = ({
     showDate: "",
     startTime: "",
     price: "",
+<<<<<<< HEAD
     status: "Sắp chiếu"
+=======
+    status: "Sắp chiếu",
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
   });
 
   const [movies, setMovies] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(false);
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
   // Fetch movies and rooms when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchMovies();
       fetchRooms();
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
       // If editing an existing showtime
       if (info && info.id) {
         setFormData({
@@ -38,7 +54,11 @@ const AddShowTimeModal = ({
           showDate: info.showDate || "",
           startTime: info.startTime ? info.startTime.substring(0, 5) : "",
           price: info.price || "",
+<<<<<<< HEAD
           status: info.status || "Sắp chiếu"
+=======
+          status: info.status || "Sắp chiếu",
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
         });
       } else {
         // Reset form for new showtime
@@ -49,12 +69,20 @@ const AddShowTimeModal = ({
           showDate: "",
           startTime: "",
           price: "",
+<<<<<<< HEAD
           status: "Sắp chiếu"
+=======
+          status: "Sắp chiếu",
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
         });
       }
     }
   }, [isOpen, info]);
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
   // Fetch available movies
   const fetchMovies = async () => {
     setLoading(true);
@@ -69,7 +97,11 @@ const AddShowTimeModal = ({
       setLoading(false);
     }
   };
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
   // Fetch available rooms
   const fetchRooms = async () => {
     setLoading(true);
@@ -92,11 +124,24 @@ const AddShowTimeModal = ({
 
   const handleSubmit = () => {
     // Validate form data
+<<<<<<< HEAD
     if (!formData.movieId || !formData.roomId || !formData.showDate || !formData.startTime) {
       alert("Vui lòng điền đầy đủ thông tin bắt buộc.");
       return;
     }
     
+=======
+    if (
+      !formData.movieId ||
+      !formData.roomId ||
+      !formData.showDate ||
+      !formData.startTime
+    ) {
+      alert("Vui lòng điền đầy đủ thông tin bắt buộc.");
+      return;
+    }
+
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
     onAddShowtime(formData);
   };
 
@@ -124,7 +169,11 @@ const AddShowTimeModal = ({
                 required
               >
                 <option value="">Chọn phim</option>
+<<<<<<< HEAD
                 {movies.map(movie => (
+=======
+                {movies.map((movie) => (
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
                   <option key={movie.id} value={movie.id}>
                     {movie.title}
                   </option>
@@ -145,7 +194,11 @@ const AddShowTimeModal = ({
                 required
               >
                 <option value="">Chọn phòng</option>
+<<<<<<< HEAD
                 {rooms.map(room => (
+=======
+                {rooms.map((room) => (
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
                   <option key={room.id} value={room.id}>
                     {room.name} - {room.Cinema?.name || "Unknown"}
                   </option>
@@ -155,7 +208,13 @@ const AddShowTimeModal = ({
 
             {/* Date selection */}
             <div>
+<<<<<<< HEAD
               <label className="block text-sm font-medium mb-1">Ngày chiếu</label>
+=======
+              <label className="block text-sm font-medium mb-1">
+                Ngày chiếu
+              </label>
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
               <input
                 type="date"
                 name="showDate"
@@ -200,7 +259,13 @@ const AddShowTimeModal = ({
 
             {/* Status selection */}
             <div>
+<<<<<<< HEAD
               <label className="block text-sm font-medium mb-1">Trạng thái</label>
+=======
+              <label className="block text-sm font-medium mb-1">
+                Trạng thái
+              </label>
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
               <select
                 name="status"
                 value={formData.status}

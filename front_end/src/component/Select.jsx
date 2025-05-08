@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const Select = ({ options, defaultValue, setDefault, keyStorage, queryRef, keySearch }) => {
   const handleChange = (e) => {
     const selectedValue = e.target.value;
@@ -13,6 +14,31 @@ const Select = ({ options, defaultValue, setDefault, keyStorage, queryRef, keySe
       // Find the selected option to get its key
       const selectedOption = options.find(opt => opt.value === selectedValue);
       queryRef.current[keySearch] = selectedOption ? selectedOption.key : '';
+=======
+const Select = ({
+  options,
+  defaultValue,
+  setDefault,
+  keyStorage,
+  queryRef,
+  keySearch,
+  // cinemaId,
+}) => {
+  const handleChange = (e) => {
+    setDefault(e.target.value);
+    // localStorage.setItem(keyStorage, e.target.value);
+    if (e.target.value === "Tất cả" || e.target.value === "All") {
+      queryRef.current.SearchKey = keySearch;
+      queryRef.current.SearchValue = "";
+    } else if (keySearch !== "cinemaId") {
+      queryRef.current.SearchKey = keySearch;
+      queryRef.current.SearchValue = e.target.value;
+    } else {
+      const selectedIndex = e.target.selectedIndex;
+      const selectedOption = e.target.options[selectedIndex];
+      const id = selectedOption.dataset.key;
+      queryRef.current.cinemaId = id;
+>>>>>>> 626958eeea26f3e633d93420202198f4651be05c
     }
   };
   
@@ -23,7 +49,12 @@ const Select = ({ options, defaultValue, setDefault, keyStorage, queryRef, keySe
       onChange={handleChange}
     >
       {options.map((opt) => (
-        <option className="flex items-center" key={opt.key} value={opt.value}>
+        <option
+          className="flex items-center"
+          data-key={opt.key}
+          key={opt.key}
+          value={opt.value}
+        >
           {opt.value}
         </option>
       ))}

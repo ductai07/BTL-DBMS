@@ -18,7 +18,6 @@ const Movies = () => {
       setData(data.data);
       setPagination(data.pagination);
       setCurrentPage(data.pagination.currentPage);
-      console.log(data.data);
     };
     Fetch();
   }, []);
@@ -36,7 +35,8 @@ const Movies = () => {
         }
       );
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        const data = await response.json();
+        console.error("Error:", data.message);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -80,13 +80,20 @@ const Movies = () => {
     setData(updatedMovies);
 
     // http://localhost:3000/movie/add
+    // status, title, duration
+    console.log("newMovie", newMovie);
+    const addMovie = {
+      status: newMovie.status,
+      title: newMovie.title,
+      duration: newMovie.duration,
+    };
     try {
       const response = await fetch("http://localhost:3000/movie/add", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newMovie),
+        body: JSON.stringify(addMovie),
       });
       if (!response.ok) {
         throw new Error("Network response was not ok");
@@ -106,6 +113,9 @@ const Movies = () => {
   });
 
   const handleSearch = () => {
+    if (queryRef.current.SearchValue === "All Genres") {
+      queryRef.current.SearchValue = "";
+    }
     queryRef.current.Page = currentPage;
     const queryString = new URLSearchParams(queryRef.current).toString();
     fetch(`http://localhost:3000/movie?${queryString}`)
@@ -120,8 +130,8 @@ const Movies = () => {
   const columnNames = ["Movie", "Duration", "Genre", "Status", "Actions"];
   const Genres = [
     {
-      key: "all",
-      value: "All Genres",
+      key: "",
+      value: "Tất cả",
     },
     {
       key: "action",
@@ -171,11 +181,19 @@ const Movies = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [infoFilm, setInfoFilm] = useState({
-    title: "",
-    duration: "",
-    genre: "",
-    status: "",
     id: Date.now(),
+    title: "",
+    genre: "",
+    duration: "",
+    releaseDate: "",
+    poster: "",
+    trailer: "",
+    description: "",
+    ageRating: "",
+    status: "",
+    director: "",
+    mainActor: "",
+    language: "",
   });
   const entry = useRef({});
   const changeEntry = (value) => {
@@ -198,8 +216,8 @@ const Movies = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   useEffect(() => {
+    console.log("SearchKey", queryRef.current.SearchValue);
     handleSearch();
-    console.log("defaultGenres", queryRef.current.SearchValue);
   }, [currentPage, search, defaultGenres, defaultFilmStatus]);
 
   return (
@@ -216,6 +234,7 @@ const Movies = () => {
                   setSearch={setSearch}
                   search={search}
                   queryRef={queryRef}
+                  keySearch={"title"}
                 />
               </div>
               <div>
@@ -277,7 +296,7 @@ const Movies = () => {
             handleDelete={handleDelete}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
-            totalPages={pagination.totalPages}
+            totalPages={pagination?.totalPages}
           />
         )}
       </div>
