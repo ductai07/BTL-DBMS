@@ -125,7 +125,7 @@ const Rooms = () => {
   ];
 
   const roomsTypes = [
-    { key: "all", value: "All Room Types" },
+    { key: "all", value: "Tất cả" },
     { key: "standard", value: "Standard" },
     { key: "vip", value: "VIP" },
     { key: "imax", value: "IMAX" },
@@ -174,6 +174,12 @@ const Rooms = () => {
   });
 
   const handleSearch = async () => {
+    if (queryRef.current.SearchValue.includes("Tất cả")) {
+      queryRef.current.SearchValue = "";
+    }
+    if (defaultCinemas === "Tất cả") {
+      queryRef.current.cinemaId = "";
+    }
     queryRef.current.Page = currentPage;
     const queryString = new URLSearchParams(queryRef.current).toString();
     const response = await fetch(`http://localhost:3000/room?${queryString}`);
@@ -266,17 +272,23 @@ const Rooms = () => {
           </div>
         </div>
 
-        <TableRooms
-          columnNames={columnNames}
-          rooms={rooms}
-          setOpen={setIsModalOpen}
-          setInfoRoom={setInfoRoom}
-          changeEntry={changeEntry}
-          handleDelete={handleDelete}
-          setCurrentPage={setCurrentPage}
-          currentPage={currentPage}
-          totalPages={pagination?.totalPages}
-        />
+        {rooms.length ? (
+          <TableRooms
+            columnNames={columnNames}
+            rooms={rooms}
+            setOpen={setIsModalOpen}
+            setInfoRoom={setInfoRoom}
+            changeEntry={changeEntry}
+            handleDelete={handleDelete}
+            setCurrentPage={setCurrentPage}
+            currentPage={currentPage}
+            totalPages={pagination?.totalPages}
+          />
+        ) : (
+          <h3 className="text-center font-semibold text-xl">
+            Không có phòng nào
+          </h3>
+        )}
       </div>
 
       <AddRoom
