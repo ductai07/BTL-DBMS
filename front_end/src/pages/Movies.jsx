@@ -113,6 +113,9 @@ const Movies = () => {
   });
 
   const handleSearch = () => {
+    if (queryRef.current.SearchValue === "All Genres") {
+      queryRef.current.SearchValue = "";
+    }
     queryRef.current.Page = currentPage;
     const queryString = new URLSearchParams(queryRef.current).toString();
     fetch(`http://localhost:3000/movie?${queryString}`)
@@ -128,7 +131,7 @@ const Movies = () => {
   const Genres = [
     {
       key: "",
-      value: "All Genres",
+      value: "Tất cả",
     },
     {
       key: "action",
