@@ -1,14 +1,17 @@
+import React from "react";
 import { IoMdNotifications } from "react-icons/io";
 
-const Header = ({ title }) => {
+export const Header = ({ title, description }) => {
   return (
     <div className="flex justify-between items-center mb-5 font-medium">
-      <h1>{title}</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
+        {description && (
+          <p className="mt-2 text-gray-600">{description}</p>
+        )}
+      </div>
       <div className="flex gap-2 items-center">
         <IoMdNotifications />
-        <span className="w-6 h-6 rounded-[999px]">
-          <img src="./imgs/avatar.png" alt="" />
-        </span>
       </div>
     </div>
   );

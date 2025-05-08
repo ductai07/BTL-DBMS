@@ -1,332 +1,583 @@
-import { useState, useEffect } from "react";
-import Header from "../component/Header";
-import Search from "../component/Search";
-import { FaPlus } from "react-icons/fa";
-import TableProducts from "../component/TableProducts";
+import React, { useState, useEffect } from "react";
+import { Header } from "../component/Header";
 import AddProductModal from "../component/AddProductModal";
-import ProductGridView from "../component/ProductGridView";
+import ProductDetailsModal from "../component/ProductDetailsModal";
+import { BiSolidPencil } from "react-icons/bi";
+import { MdDelete } from "react-icons/md";
+import { formatCurrency } from "../utils/formatUtils";
+import { Select } from "../component/Select";
+import { API_BASE_URL, API_ENDPOINTS } from "../config/api";
+
+// Create simple toast notification replacements
+const toast = {
+  success: (message) => {
+    console.log("Success:", message);
+    alert(message);
+  },
+  error: (message) => {
+    console.error("Error:", message);
+    alert("Error: " + message);
+  }
+};
 
 const Products = () => {
-  const [view, setView] = useState("grid");
+  // State variables
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [productInfo, setProductInfo] = useState(null);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    pageSize: 12,
-    total: 0
-  });
+  const [openAdd, setOpenAdd] = useState(false);
+  const [openDetails, setOpenDetails] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productInfo, setProductInfo] = useState({});
+  const [addButtonText, setAddButtonText] = useState(["Add product", "Add"]);
+  const [perPage, setPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [viewType, setViewType] = useState("grid"); // "grid" or "table"
   const [searchText, setSearchText] = useState("");
 
-  // Fetch products from the backend API
+  const categories = ["All", "Popcorn", "Drink", "Combo"];
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
+  // Fetch products with search and category filter
   const fetchProducts = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
-      const response = await fetch(`http://localhost:3000/product?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`);
+      // First try the new API format
+      let url = `${API_ENDPOINTS.PRODUCTS}?page=${currentPage}&limit=${perPage}`;
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Add search parameter if present
+      if (searchText) {
+        url += `&search=${encodeURIComponent(searchText)}`;
       }
       
-      const data = await response.json();
+      // Add category filter if not "All"
+      if (selectedCategory !== "All") {
+        url += `&category=${encodeURIComponent(selectedCategory)}`;
+      }
       
-      // Transform data to match the expected format
-      const formattedProducts = (data.data || []).map(product => ({
+      console.log("Fetching products from URL:", url);
+      
+      try {
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch products. Status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("Products data received:", data);
+        
+        // Check if we got the expected data structure
+        if (data.products || data.data) {
+          setProducts(data.products || data.data || []);
+          setTotalPages(data.totalPages || data.pagination?.totalPages || 1);
+          setTotalProducts(data.totalCount || data.pagination?.total || 0);
+          return;
+        } else {
+          throw new Error("Invalid data format received");
+        }
+      } catch (err) {
+        console.warn("New API format failed, trying legacy format:", err);
+        // Fall through to try legacy format
+      }
+      
+      // Try legacy API format as fallback
+      let legacyUrl = `${API_BASE_URL}/product?Page=${currentPage}&Limit=${perPage}`;
+      
+      if (searchText) {
+        legacyUrl += `&SearchKey=name&SearchValue=${encodeURIComponent(searchText)}`;
+      }
+      
+      if (selectedCategory !== "All") {
+        legacyUrl += `&category=${encodeURIComponent(selectedCategory)}`;
+      }
+      
+      console.log("Trying legacy API format:", legacyUrl);
+      
+      const legacyResponse = await fetch(legacyUrl);
+      
+      if (!legacyResponse.ok) {
+        throw new Error(`Failed to fetch products using legacy API. Status: ${legacyResponse.status}`);
+      }
+      
+      const legacyData = await legacyResponse.json();
+      console.log("Legacy products data received:", legacyData);
+      
+      // Transform data to expected format
+      const formattedProducts = (legacyData.data || []).map(product => ({
         id: product.id,
-        name: product.name,
-        price: product.price,
-        unit: product.unit || 'Cái',
-        quantity: product.quantity || 0,
-        image: product.image || 'https://placehold.co/300x300?text=No+Image',
-        description: product.description || '',
-        category: product.category || 'Sản phẩm',
-        // Keep original data
-        originalData: product
+        name: product.name || "Unknown Product",
+        price: product.price || 0,
+        category: product.category || "Uncategorized",
+        description: product.description || "",
+        inStock: product.quantity > 0,
+        image: product.image || "https://placehold.co/300x300?text=No+Image"
       }));
       
       setProducts(formattedProducts);
-      applyFilters(formattedProducts, searchText);
-      setPagination({
-        currentPage: data.pagination?.currentPage || 1,
-        totalPages: data.pagination?.totalPages || 1,
-        pageSize: data.pagination?.pageSize || 12,
-        total: data.pagination?.total || 0
-      });
-      setError(null);
+      setTotalPages(legacyData.pagination?.totalPages || 1);
+      setTotalProducts(legacyData.pagination?.total || 0);
+      
     } catch (err) {
       console.error("Error fetching products:", err);
-      setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
-      setProducts([]);
-      setFilteredProducts([]);
+      setError(err.message || "Failed to fetch products");
+      toast.error("Failed to load products. Please try again later.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Initial data fetch
+  // Handle search
+  const handleSearch = (e) => {
+    setSearchText(e.target.value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  // Fetch products when component mounts or dependencies change
   useEffect(() => {
     fetchProducts();
-  }, [pagination.currentPage]);
+  }, [currentPage, perPage, selectedCategory, searchText]);
 
-  // Apply filters to products
-  const applyFilters = (productsData, search) => {
-    if (!search) {
-      setFilteredProducts(productsData);
+  // Function to handle adding or editing a product
+  const handleAddProduct = async (newProduct) => {
+    setLoading(true);
+    
+    try {
+      const isEditing = newProduct.id !== undefined;
+      
+      const url = isEditing 
+        ? API_ENDPOINTS.PRODUCT_DETAILS(newProduct.id)
+        : API_ENDPOINTS.PRODUCTS;
+      
+      const method = isEditing ? "PUT" : "POST";
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newProduct),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to ${isEditing ? 'update' : 'add'} product. Status: ${response.status}`);
+      }
+      
+      toast.success(`Product ${isEditing ? 'updated' : 'added'} successfully!`);
+      setOpenAdd(false);
+      
+      // Refresh the products list
+      fetchProducts();
+      
+    } catch (err) {
+      console.error(`Error ${newProduct.id ? 'updating' : 'adding'} product:`, err);
+      toast.error(err.message || `Failed to ${newProduct.id ? 'update' : 'add'} product`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to handle deleting a product
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) {
       return;
     }
     
-    const lowerSearch = search.toLowerCase();
-    const filtered = productsData.filter(product => 
-      product.name.toLowerCase().includes(lowerSearch) || 
-      product.description.toLowerCase().includes(lowerSearch) ||
-      product.category.toLowerCase().includes(lowerSearch)
-    );
+    setLoading(true);
     
-    setFilteredProducts(filtered);
-  };
-
-  // Handle search change
-  const handleSearch = (text) => {
-    setSearchText(text);
-    applyFilters(products, text);
-  };
-
-  // Handle adding or editing a product
-  const handleAddProduct = async (productData) => {
     try {
-      setLoading(true);
-      let response;
-      
-      if (productData.id && productData.originalData) {
-        // Edit existing product
-        response = await fetch(`http://localhost:3000/product/edit/${productData.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            name: productData.name,
-            price: productData.price,
-            quantity: productData.quantity,
-            unit: productData.unit,
-            description: productData.description,
-            image: productData.image
-          })
-        });
-      } else {
-        // Add new product
-        response = await fetch('http://localhost:3000/product/add', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            name: productData.name,
-            price: productData.price,
-            quantity: productData.quantity,
-            unit: productData.unit,
-            description: productData.description,
-            image: productData.image
-          })
-        });
-      }
+      const response = await fetch(API_ENDPOINTS.PRODUCT_DETAILS(id), {
+        method: "DELETE",
+      });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(`Failed to delete product. Status: ${response.status}`);
       }
       
-      // Re-fetch the products after adding/editing
-      await fetchProducts();
-      setIsModalOpen(false);
-      alert(productData.id ? "Cập nhật sản phẩm thành công!" : "Thêm sản phẩm thành công!");
+      toast.success("Product deleted successfully!");
+      
+      // Refresh the products list
+      fetchProducts();
+      
     } catch (err) {
-      console.error("Error saving product:", err);
-      alert(`Không thể lưu sản phẩm: ${err.message}`);
+      console.error("Error deleting product:", err);
+      toast.error(err.message || "Failed to delete product");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Handle product deletion
-  const handleDeleteProduct = async (productId) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?")) {
-      try {
-        setLoading(true);
-        const response = await fetch(`http://localhost:3000/product/delete/${productId}`, {
-          method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
-        
-        // Re-fetch products after deletion
-        await fetchProducts();
-        alert("Xóa sản phẩm thành công!");
-      } catch (err) {
-        console.error("Error deleting product:", err);
-        alert(`Không thể xóa sản phẩm: ${err.message}`);
-      } finally {
-        setLoading(false);
-      }
     }
   };
 
   // Handle page change
-  const handlePageChange = (newPage) => {
-    setPagination(prev => ({
-      ...prev,
-      currentPage: newPage
-    }));
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Handle per page change
+  const handlePerPageChange = (e) => {
+    setPerPage(parseInt(e.target.value));
+    setCurrentPage(1); // Reset to first page when changing per page
+  };
+
+  // Handle category change
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    setCurrentPage(1); // Reset to first page when changing category
+  };
+
+  // Open Add/Edit modal
+  const openAddModal = (product = null) => {
+    if (product) {
+      setAddButtonText(["Edit product", "Save"]);
+      setProductInfo(product);
+    } else {
+      setAddButtonText(["Add product", "Add"]);
+      setProductInfo({});
+    }
+    setOpenAdd(true);
+  };
+
+  // Open product details modal
+  const openDetailsModal = (product) => {
+    setSelectedProduct(product);
+    setOpenDetails(true);
   };
 
   return (
-    <div className="w-full min-h-screen bg-gray-100">
-      <div className="p-6">
-        <Header title="Quản lý sản phẩm" />
-        
-        {/* Top Controls */}
-        <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <Search 
-              placeholder="Tìm kiếm sản phẩm..." 
-              onSearch={handleSearch} 
-              search={searchText}
+    <div className="container-fluid mt-5">
+      <Header
+        title="Products"
+        description="Manage your cinema's products and services"
+      />
+
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center my-4 gap-3">
+        <div className="flex flex-col md:flex-row gap-3 w-full lg:w-auto">
+          {/* Search bar */}
+          <div className="relative w-full md:w-80">
+            <input
+              type="text"
+              placeholder="Search products..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={searchText}
+              onChange={handleSearch}
             />
-            
-            <div className="flex rounded-lg overflow-hidden">
-              <button 
-                className={`px-4 py-2 ${view === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
-                onClick={() => setView('grid')}
+            <button
+              onClick={() => setSearchText("")}
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 ${
+                !searchText && "hidden"
+              }`}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Category filter */}
+          <div className="w-full md:w-auto">
+            <Select
+              options={categories}
+              placeholder="All Categories"
+              selected={selectedCategory}
+              setSelected={handleCategoryChange}
+              size="sm"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-3 w-full lg:w-auto">
+          {/* View type toggle */}
+          <div className="flex rounded-md overflow-hidden border border-gray-300">
+            <button
+              className={`px-3 py-2 ${
+                viewType === "grid"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-700"
+              }`}
+              onClick={() => setViewType("grid")}
+            >
+              Grid
+            </button>
+            <button
+              className={`px-3 py-2 ${
+                viewType === "table"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-700"
+              }`}
+              onClick={() => setViewType("table")}
+            >
+              Table
+            </button>
+          </div>
+
+          {/* Add product button */}
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            onClick={() => openAddModal()}
+          >
+            Add Product
+          </button>
+        </div>
+      </div>
+
+      {/* Loading and error states */}
+      {loading && (
+        <div className="flex justify-center my-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg my-4">
+          <p>{error}</p>
+          <button
+            className="text-sm underline mt-2"
+            onClick={fetchProducts}
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Products display */}
+      {!loading && !error && products.length === 0 && (
+        <div className="bg-gray-50 rounded-lg py-8 px-4 text-center my-4">
+          <p className="text-gray-500 mb-4">No products found.</p>
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            onClick={() => openAddModal()}
+          >
+            Add your first product
+          </button>
+        </div>
+      )}
+
+      {/* Products grid view */}
+      {!loading && !error && products.length > 0 && viewType === "grid" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 my-4">
+          {products.map((product) => (
+            <div
+              key={product.id}
+              className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-200"
+            >
+              <div 
+                className="p-4 cursor-pointer"
+                onClick={() => openDetailsModal(product)}
               >
-                Grid
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 line-clamp-1">
+                      {product.name}
+                    </h3>
+                    <p className="text-sm text-blue-500 font-medium mt-1">
+                      {product.category || "Uncategorized"}
+                    </p>
+                  </div>
+                  <span className="bg-blue-50 text-blue-700 text-sm font-medium px-2 py-1 rounded">
+                    {formatCurrency(product.price)}
+                  </span>
+                </div>
+                <p className="text-gray-600 text-sm mt-2 line-clamp-2">
+                  {product.description || "No description provided"}
+                </p>
+                <div className="flex justify-between items-center mt-4">
+                  <span
+                    className={`text-sm font-medium px-2 py-1 rounded-full ${
+                      product.inStock
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {product.inStock ? "In Stock" : "Out of Stock"}
+                  </span>
+                  <div className="flex space-x-2">
+                    <button
+                      className="p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openAddModal(product);
+                      }}
+                    >
+                      <BiSolidPencil />
+                    </button>
+                    <button
+                      className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(product.id);
+                      }}
+                    >
+                      <MdDelete />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Products table view */}
+      {!loading && !error && products.length > 0 && viewType === "table" && (
+        <div className="overflow-x-auto bg-white rounded-lg shadow-sm my-4">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {products.map((product) => (
+                <tr 
+                  key={product.id} 
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => openDetailsModal(product)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {product.name}
+                    </div>
+                    <div className="text-sm text-gray-500 line-clamp-1">
+                      {product.description || "No description"}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                      {product.category || "Uncategorized"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900 font-medium">
+                      {formatCurrency(product.price)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        product.inStock
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {product.inStock ? "In Stock" : "Out of Stock"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button
+                        className="text-blue-600 hover:text-blue-900 font-medium"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openAddModal(product);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="text-red-600 hover:text-red-900 font-medium"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(product.id);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && !error && products.length > 0 && (
+        <div className="flex flex-col md:flex-row justify-between items-center my-4">
+          <div className="text-sm text-gray-500 mb-4 md:mb-0">
+            Showing {(currentPage - 1) * perPage + 1} to{" "}
+            {Math.min(currentPage * perPage, totalProducts)} of {totalProducts} products
+          </div>
+          <div className="flex items-center space-x-2">
+            <select
+              className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+              value={perPage}
+              onChange={handlePerPageChange}
+            >
+              <option value="10">10 per page</option>
+              <option value="20">20 per page</option>
+              <option value="50">50 per page</option>
+            </select>
+            <div className="flex space-x-1">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-3 py-1 rounded-md ${
+                  currentPage === 1
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-blue-500 hover:bg-blue-50 border border-gray-300"
+                }`}
+              >
+                &lt;
               </button>
-              <button 
-                className={`px-4 py-2 ${view === 'table' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
-                onClick={() => setView('table')}
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => handlePageChange(i + 1)}
+                  className={`px-3 py-1 rounded-md ${
+                    currentPage === i + 1
+                      ? "bg-blue-500 text-white"
+                      : "bg-white text-blue-500 hover:bg-blue-50 border border-gray-300"
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`px-3 py-1 rounded-md ${
+                  currentPage === totalPages
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-blue-500 hover:bg-blue-50 border border-gray-300"
+                }`}
               >
-                Table
+                &gt;
               </button>
             </div>
           </div>
-          
-          <button
-            onClick={() => {
-              setProductInfo(null);
-              setIsModalOpen(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-          >
-            <FaPlus /> Thêm sản phẩm
-          </button>
         </div>
-        
-        {/* Content */}
-        {loading ? (
-          <div className="flex justify-center py-10">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-          </div>
-        ) : error ? (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-            {error}
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="bg-white p-8 rounded-lg text-center shadow-sm">
-            <p className="text-gray-500">Không tìm thấy sản phẩm nào.</p>
-          </div>
-        ) : (
-          <>
-            {view === 'grid' ? (
-              <ProductGridView 
-                products={filteredProducts}
-                onEdit={(product) => {
-                  setProductInfo(product);
-                  setIsModalOpen(true);
-                }}
-                onDelete={handleDeleteProduct}
-              />
-            ) : (
-              <TableProducts 
-                products={filteredProducts} 
-                onEdit={(product) => {
-                  setProductInfo(product);
-                  setIsModalOpen(true);
-                }}
-                onDelete={handleDeleteProduct}
-              />
-            )}
-            
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="flex justify-center mt-6">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handlePageChange(Math.max(1, pagination.currentPage - 1))}
-                    disabled={pagination.currentPage === 1}
-                    className={`px-3 py-1 rounded ${pagination.currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
-                  >
-                    Trước
-                  </button>
-                  
-                  <div className="flex items-center gap-1">
-                    {[...Array(pagination.totalPages)].map((_, i) => {
-                      // Show max 5 page numbers with ellipsis
-                      if (
-                        pagination.totalPages <= 5 ||
-                        i + 1 === 1 ||
-                        i + 1 === pagination.totalPages ||
-                        (i + 1 >= pagination.currentPage - 1 && i + 1 <= pagination.currentPage + 1)
-                      ) {
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => handlePageChange(i + 1)}
-                            className={`w-8 h-8 flex items-center justify-center rounded ${
-                              pagination.currentPage === i + 1
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                            }`}
-                          >
-                            {i + 1}
-                          </button>
-                        );
-                      } else if (
-                        (i === 1 && pagination.currentPage > 3) ||
-                        (i === pagination.totalPages - 2 && pagination.currentPage < pagination.totalPages - 2)
-                      ) {
-                        return <span key={i}>...</span>;
-                      }
-                      return null;
-                    })}
-                  </div>
-                  
-                  <button
-                    onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.currentPage + 1))}
-                    disabled={pagination.currentPage === pagination.totalPages}
-                    className={`px-3 py-1 rounded ${pagination.currentPage === pagination.totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
-                  >
-                    Tiếp
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-      
+      )}
+
       {/* Add/Edit Product Modal */}
       <AddProductModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleAddProduct}
-        product={productInfo}
-        title={productInfo ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
+        isOpen={openAdd}
+        closeModal={() => setOpenAdd(false)}
+        addProduct={handleAddProduct}
+        buttonText={addButtonText}
+        initialData={productInfo}
+      />
+
+      {/* Product Details Modal */}
+      <ProductDetailsModal
+        isOpen={openDetails}
+        closeModal={() => setOpenDetails(false)}
+        product={selectedProduct}
       />
     </div>
   );

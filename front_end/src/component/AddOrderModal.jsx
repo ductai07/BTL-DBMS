@@ -4,118 +4,205 @@ import { FaPlus, FaTrash } from "react-icons/fa";
 import { formatCurrency } from "../utils/formatUtils";
 
 const AddOrderModal = ({
-  title,
   isOpen,
   onClose,
-  onAddOrder,
-  info,
-  setInfo,
-  Entry,
+  onSave
 }) => {
   const [items, setItems] = useState([]);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [customer, setCustomer] = useState({
+    name: "",
+    phone: ""
+  });
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState([]);
   const [newItem, setNewItem] = useState({
+    product_id: "",
     name: "",
     price: 0,
-    quantity: 1,
-    id: Date.now()
+    quantity: 1
   });
 
-  // Reset form when modal closes or when editing a different order
+  // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
       setItems([]);
       setTotalAmount(0);
+      setCustomer({ name: "", phone: "" });
+      setPaymentMethod("");
       setNewItem({
+        product_id: "",
         name: "",
         price: 0,
-        quantity: 1,
-        id: Date.now()
+        quantity: 1
       });
-    } else if (info && info.items) {
-      // If editing an existing order, load its items
-      setItems(info.items);
-      calculateTotal(info.items);
+    } else {
+      // Fetch available products
+      fetchProducts();
     }
-  }, [isOpen, info]);
+  }, [isOpen]);
+
+  // Fetch available products
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("http://localhost:3000/product");
+      const data = await response.json();
+      
+      if (data && Array.isArray(data.data)) {
+        setProducts(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Calculate total amount when items change
-  const calculateTotal = (itemsArray) => {
-    const total = itemsArray.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  useEffect(() => {
+    const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     setTotalAmount(total);
-    return total;
-  };
+  }, [items]);
 
-  const handleChange = (e) => {
+  const handleCustomerChange = (e) => {
     const { name, value } = e.target;
-    setInfo({ ...info, [name]: value });
+    setCustomer(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Generate order number if it's a new order
-    let orderNumber = info.orderNumber;
-    if (!orderNumber) {
-      const now = new Date();
-      const year = now.getFullYear();
-      const randomDigits = Math.floor(1000 + Math.random() * 9000);
-      orderNumber = `ORD-${year}-${randomDigits}`;
+    if (items.length === 0) {
+      alert("Vui lòng thêm ít nhất một sản phẩm vào đơn hàng");
+      return;
     }
     
-    onAddOrder({
-      ...info,
-      orderNumber,
-      items,
-      totalAmount,
-      id: info.id || Date.now(),
-    });
-    onClose();
+    try {
+      setLoading(true);
+      
+      // Step 1: Create the invoice
+      const createResponse = await fetch("http://localhost:3000/invoice/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          note: `Customer: ${customer.name} - ${customer.phone}`
+        })
+      });
+      
+      if (!createResponse.ok) {
+        throw new Error("Failed to create invoice");
+      }
+      
+      const invoiceData = await createResponse.json();
+      const invoiceId = invoiceData.data.id;
+      
+      // Step 2: Add products to the invoice
+      for (const item of items) {
+        await fetch(`http://localhost:3000/invoice/${invoiceId}/product`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            product_id: item.product_id,
+            quantity: item.quantity
+          })
+        });
+      }
+      
+      // Step 3: Process payment
+      await fetch(`http://localhost:3000/invoice/payment/${invoiceId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          paymentMethod: paymentMethod || "Cash"
+        })
+      });
+      
+      // Call the parent handler
+      if (typeof onSave === 'function') {
+        onSave();
+      }
+      
+      onClose();
+      alert("Đơn hàng đã được tạo thành công!");
+    } catch (error) {
+      console.error("Error creating order:", error);
+      alert("Không thể tạo đơn hàng. Vui lòng thử lại sau.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Handle new item input changes
-  const handleItemChange = (e) => {
-    const { name, value } = e.target;
-    setNewItem({ 
-      ...newItem, 
-      [name]: name === "price" || name === "quantity" ? Number(value) : value 
-    });
+  // Handle product selection
+  const handleProductChange = (e) => {
+    const productId = e.target.value;
+    const selectedProduct = products.find(p => p.id.toString() === productId);
+    
+    if (selectedProduct) {
+      setNewItem({
+        product_id: selectedProduct.id,
+        name: selectedProduct.name,
+        price: selectedProduct.price,
+        quantity: 1
+      });
+    } else {
+      setNewItem({
+        product_id: "",
+        name: "",
+        price: 0,
+        quantity: 1
+      });
+    }
   };
 
   // Add new item to the order
   const addItem = () => {
-    if (newItem.name && newItem.price > 0) {
-      const updatedItems = [...items, { ...newItem, id: Date.now() }];
-      setItems(updatedItems);
-      calculateTotal(updatedItems);
-      
-      // Reset new item form
-      setNewItem({
-        name: "",
-        price: 0,
-        quantity: 1,
-        id: Date.now()
-      });
+    if (!newItem.product_id) {
+      alert("Vui lòng chọn sản phẩm");
+      return;
     }
+    
+    // Check if the product already exists in the order
+    const existingItemIndex = items.findIndex(item => item.product_id === newItem.product_id);
+    
+    if (existingItemIndex !== -1) {
+      // Update quantity if product already exists
+      const updatedItems = [...items];
+      updatedItems[existingItemIndex].quantity += newItem.quantity;
+      setItems(updatedItems);
+    } else {
+      // Add new product
+      setItems([...items, { ...newItem, id: Date.now() }]);
+    }
+    
+    // Reset selection
+    setNewItem({
+      product_id: "",
+      name: "",
+      price: 0,
+      quantity: 1
+    });
   };
 
   // Remove item from order
   const removeItem = (itemId) => {
-    const updatedItems = items.filter(item => item.id !== itemId);
-    setItems(updatedItems);
-    calculateTotal(updatedItems);
+    setItems(items.filter(item => item.id !== itemId));
   };
 
   // Update item quantity
   const updateQuantity = (itemId, newQuantity) => {
     if (newQuantity < 1) return;
     
-    const updatedItems = items.map(item => 
+    setItems(items.map(item => 
       item.id === itemId ? { ...item, quantity: newQuantity } : item
-    );
-    
-    setItems(updatedItems);
-    calculateTotal(updatedItems);
+    ));
   };
 
   if (!isOpen) return null;
@@ -124,7 +211,7 @@ const AddOrderModal = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center overflow-y-auto">
       <div className="bg-white rounded-lg w-[700px] max-w-[95%] max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center border-b sticky top-0 bg-white px-5 py-3 z-10">
-          <h3 className="font-semibold text-lg">{title}</h3>
+          <h3 className="font-semibold text-lg">Tạo đơn hàng mới</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <IoClose size={24} />
           </button>
@@ -134,111 +221,92 @@ const AddOrderModal = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-1">
-                Customer Name
+                Tên khách hàng
               </label>
               <input
                 type="text"
-                name="customerName"
-                value={info.customerName || ""}
-                onChange={handleChange}
-                placeholder="e.g. Nguyễn Văn A"
+                name="name"
+                value={customer.name}
+                onChange={handleCustomerChange}
+                placeholder="Ví dụ: Nguyễn Văn A"
                 className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                required
               />
             </div>
             
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-1">
-                Payment Method
+                Số điện thoại
               </label>
-              <select
-                name="paymentMethod"
-                value={info.paymentMethod || ""}
-                onChange={handleChange}
+              <input
+                type="text"
+                name="phone"
+                value={customer.phone}
+                onChange={handleCustomerChange}
+                placeholder="Ví dụ: 0987654321"
                 className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                required
-              >
-                <option value="">Select Payment Method</option>
-                <option value="Cash">Cash</option>
-                <option value="Credit Card">Credit Card</option>
-                <option value="Banking App">Banking App</option>
-              </select>
+              />
             </div>
 
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-1">
-                Date & Time
-              </label>
-              <input
-                type="datetime-local"
-                name="orderDate"
-                value={info.orderDate ? new Date(info.orderDate).toISOString().slice(0, 16) : ""}
-                onChange={handleChange}
-                className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-1">
-                Status
+                Phương thức thanh toán
               </label>
               <select
-                name="status"
-                value={info.status || ""}
-                onChange={handleChange}
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
                 className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
                 required
               >
-                <option value="">Select Status</option>
-                <option value="Processing">Processing</option>
-                <option value="Completed">Completed</option>
-                <option value="Cancelled">Cancelled</option>
+                <option value="">Chọn phương thức thanh toán</option>
+                <option value="Cash">Tiền mặt</option>
+                <option value="Card">Thẻ tín dụng</option>
+                <option value="Banking">Chuyển khoản</option>
               </select>
             </div>
           </div>
 
           {/* Items Section */}
           <div className="mb-6">
-            <h4 className="font-medium text-gray-800 mb-2">Order Items</h4>
+            <h4 className="font-medium text-gray-800 mb-2">Danh sách sản phẩm</h4>
             
             <div className="bg-gray-50 p-4 rounded-md mb-4">
               <div className="grid grid-cols-12 gap-2 mb-3">
                 <div className="col-span-5">
                   <label className="block text-gray-700 text-xs font-medium mb-1">
-                    Item Name
+                    Sản phẩm
                   </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={newItem.name}
-                    onChange={handleItemChange}
-                    placeholder="e.g. Ticket or Product name"
+                  <select
+                    value={newItem.product_id}
+                    onChange={handleProductChange}
                     className="border border-gray-300 rounded-md p-1.5 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
+                  >
+                    <option value="">Chọn sản phẩm</option>
+                    {products.map(product => (
+                      <option key={product.id} value={product.id}>
+                        {product.name} - {formatCurrency(product.price)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="col-span-3">
                   <label className="block text-gray-700 text-xs font-medium mb-1">
-                    Price (VND)
+                    Giá (VND)
                   </label>
                   <input
                     type="number"
-                    name="price"
                     value={newItem.price}
-                    onChange={handleItemChange}
-                    placeholder="e.g. 120000"
-                    className="border border-gray-300 rounded-md p-1.5 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    readOnly
+                    className="border border-gray-300 rounded-md p-1.5 w-full text-sm bg-gray-100"
                   />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-gray-700 text-xs font-medium mb-1">
-                    Quantity
+                    Số lượng
                   </label>
                   <input
                     type="number"
-                    name="quantity"
                     value={newItem.quantity}
-                    onChange={handleItemChange}
+                    onChange={(e) => setNewItem({...newItem, quantity: parseInt(e.target.value) || 1})}
                     min="1"
                     className="border border-gray-300 rounded-md p-1.5 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
@@ -254,95 +322,113 @@ const AddOrderModal = ({
                 </div>
               </div>
             </div>
-
-            {/* Item List */}
+            
+            {/* Items List */}
             {items.length > 0 ? (
               <div className="border rounded-md overflow-hidden">
-                <table className="w-full text-sm">
+                <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
-                    <tr className="text-xs text-gray-700 border-b">
-                      <th className="px-3 py-2 text-left">Item</th>
-                      <th className="px-3 py-2 text-center">Price</th>
-                      <th className="px-3 py-2 text-center">Qty</th>
-                      <th className="px-3 py-2 text-right">Subtotal</th>
-                      <th className="px-3 py-2 text-center w-10">Action</th>
+                    <tr>
+                      <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Sản phẩm
+                      </th>
+                      <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Đơn giá
+                      </th>
+                      <th scope="col" className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        SL
+                      </th>
+                      <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thành tiền
+                      </th>
+                      <th scope="col" className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Xóa
+                      </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {items.map((item) => (
-                      <tr key={item.id} className="border-b last:border-b-0">
-                        <td className="px-3 py-2 text-left">{item.name}</td>
-                        <td className="px-3 py-2 text-center">{formatCurrency(item.price)}</td>
-                        <td className="px-3 py-2 text-center">
-                          <div className="flex items-center justify-center">
-                            <button
-                              type="button"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              className="px-1 text-gray-500 hover:text-blue-500"
-                            >
-                              -
-                            </button>
-                            <span className="mx-1 w-6 text-center">{item.quantity}</span>
-                            <button
-                              type="button"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="px-1 text-gray-500 hover:text-blue-500"
-                            >
-                              +
-                            </button>
-                          </div>
+                      <tr key={item.id}>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {item.name}
                         </td>
-                        <td className="px-3 py-2 text-right font-medium">
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 text-right">
+                          {formatCurrency(item.price)}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-center">
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
+                            className="w-12 text-center border rounded p-1 text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
                           {formatCurrency(item.price * item.quantity)}
                         </td>
-                        <td className="px-3 py-2 text-center">
+                        <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium text-center">
                           <button
                             type="button"
                             onClick={() => removeItem(item.id)}
-                            className="text-red-500 hover:text-red-700"
+                            className="text-red-600 hover:text-red-900"
                           >
-                            <FaTrash size={12} />
+                            <FaTrash size={14} />
                           </button>
                         </td>
                       </tr>
                     ))}
-                    <tr className="bg-gray-50 font-medium">
-                      <td colSpan="3" className="px-3 py-2 text-right">
-                        Total:
-                      </td>
-                      <td className="px-3 py-2 text-right text-green-700">
-                        {formatCurrency(totalAmount)}
-                      </td>
-                      <td></td>
-                    </tr>
                   </tbody>
                 </table>
               </div>
             ) : (
-              <div className="text-center py-4 bg-gray-50 rounded-md text-gray-500 border border-dashed border-gray-300">
-                No items added yet. Add items to create an order.
+              <div className="text-center py-4 text-gray-500 bg-gray-100 rounded-md">
+                Chưa có sản phẩm nào trong đơn hàng
+              </div>
+            )}
+
+            {/* Order Summary */}
+            {items.length > 0 && (
+              <div className="mt-4 flex justify-end">
+                <div className="w-64 bg-gray-50 p-4 rounded-md">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm text-gray-600">Tổng số lượng:</span>
+                    <span className="font-medium">{items.reduce((sum, item) => sum + item.quantity, 0)}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-gray-200">
+                    <span className="text-sm font-medium">Tổng tiền:</span>
+                    <span className="font-bold text-green-600">{formatCurrency(totalAmount)}</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-
+          
+          {/* Form Actions */}
           <div className="mt-6 flex justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400 mr-2"
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 mr-2"
             >
-              Cancel
+              Hủy
             </button>
             <button
               type="submit"
-              disabled={items.length === 0}
-              className={`px-4 py-2 rounded-md ${
-                items.length === 0 
-                  ? 'bg-gray-400 cursor-not-allowed text-white' 
-                  : 'bg-blue-500 text-white hover:bg-blue-600'
-              }`}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              disabled={loading || items.length === 0}
             >
-              {Entry}
+              {loading ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Đang xử lý...
+                </span>
+              ) : (
+                "Tạo đơn hàng"
+              )}
             </button>
           </div>
         </form>

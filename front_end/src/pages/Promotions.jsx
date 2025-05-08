@@ -7,100 +7,252 @@ import AddPromotionModal from "../component/AddPromotionModal";
 import { formatCurrency } from "../utils/formatUtils";
 
 const Promotions = () => {
-  // Sample data - would normally come from an API
-  let [data, setData] = useState([
-    {
-      id: 1,
-      code: "SUMMER25",
-      name: "Summer Sale 25%",
-      type: "Percentage",
-      value: 25,
-      minPurchase: 100000,
-      maxDiscount: 50000,
-      startDate: "2025-06-01",
-      endDate: "2025-08-31",
-      status: "Scheduled",
-      usageCount: 0,
-      applyTo: "All",
-      description: "25% off for all purchases during summer"
-    },
-    {
-      id: 2,
-      code: "WELCOME50K",
-      name: "New Customer Welcome",
-      type: "Fixed Amount",
-      value: 50000,
-      minPurchase: 200000,
-      maxDiscount: 50000,
-      startDate: "2025-01-01",
-      endDate: "2025-12-31",
-      status: "Active",
-      usageCount: 145,
-      applyTo: "Tickets",
-      description: "50,000 VND off for new customers"
-    },
-    {
-      id: 3,
-      code: "COMBO30",
-      name: "Combo Discount 30%",
-      type: "Percentage",
-      value: 30,
-      minPurchase: 0,
-      maxDiscount: 100000,
-      startDate: "2025-04-01",
-      endDate: "2025-05-15",
-      status: "Active",
-      usageCount: 78,
-      applyTo: "Food & Drinks",
-      description: "30% off on all combo purchases"
-    },
-    {
-      id: 4,
-      code: "BDAY100K",
-      name: "Birthday Special",
-      type: "Fixed Amount",
-      value: 100000,
-      minPurchase: 300000,
-      maxDiscount: 100000,
-      startDate: "2025-01-01",
-      endDate: "2025-12-31",
-      status: "Active",
-      usageCount: 56,
-      applyTo: "All",
-      description: "Special birthday discount"
-    },
-    {
-      id: 5,
-      code: "WEEKEND10",
-      name: "Weekend Discount",
-      type: "Percentage",
-      value: 10,
-      minPurchase: 0,
-      maxDiscount: 30000,
-      startDate: "2025-03-01",
-      endDate: "2025-04-01",
-      status: "Expired",
-      usageCount: 230,
-      applyTo: "Tickets",
-      description: "10% off on weekend tickets"
+  // State for promotions data
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    pageSize: 10,
+    total: 0
+  });
+  
+  // Fetch promotions from the API
+  const fetchPromotions = async () => {
+    setLoading(true);
+    try {
+      // Build URL with filters
+      let url = `http://localhost:3000/discount?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
+      
+      // Add filters if selected
+      if (defaultStatus !== promotionStatuses[0].value) {
+        const statusValue = defaultStatus.toLowerCase();
+        url += `&status=${statusValue}`;
+      }
+      
+      if (defaultType !== promotionTypes[0].value) {
+        const typeValue = defaultType === "Fixed Amount" ? "fixed" : "percentage";
+        url += `&type=${typeValue}`;
+      }
+      
+      if (defaultScope !== applicationScope[0].value) {
+        const scopeValue = defaultScope.toLowerCase().replace(' & ', '_');
+        url += `&applyTo=${scopeValue}`;
+      }
+      
+      if (searchTerm.trim() !== "") {
+        url += `&SearchKey=name&SearchValue=${encodeURIComponent(searchTerm)}`;
+      }
+      
+      console.log("Fetching promotions from:", url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const responseData = await response.json();
+      console.log("Promotion data received:", responseData);
+      
+      if (!responseData || !Array.isArray(responseData.data)) {
+        console.error("Invalid promotion data format:", responseData);
+        throw new Error("Invalid data format received from server");
+      }
+      
+      // Format data for our component
+      const formattedPromotions = responseData.data.map(discount => {
+        // Ensure we have valid data objects
+        const discountData = discount || {};
+        
+        // Normalize discount value based on what field the API returned
+        const discountValue = parseFloat(discountData.discountValue || discountData.value || 0);
+        
+        // Determine discount type (percentage or fixed)
+        let discountType = "Percentage";
+        if (discountData.discountType === "fixed" || discountData.type === "fixed") {
+          discountType = "Fixed Amount";
+        }
+        
+        // Get discount name from either name or title field
+        const discountName = discountData.name || discountData.title || `Discount #${discountData.id}`;
+        
+        // Get code from proper field
+        const discountCode = discountData.code || discountData.promotionCode || `PROMO${discountData.id}`;
+        
+        // Parse dates
+        const startDate = discountData.startDate || discountData.startTime || new Date().toISOString().split('T')[0];
+        const endDate = discountData.endDate || discountData.endTime || new Date().toISOString().split('T')[0];
+        
+        return {
+          id: discountData.id,
+          code: discountCode,
+          name: discountName,
+          type: discountType,
+          value: discountValue,
+          minPurchase: parseFloat(discountData.minPurchase || 0),
+          maxDiscount: parseFloat(discountData.maxDiscount || 0),
+          startDate: startDate,
+          endDate: endDate,
+          status: discountData.status || determineStatus(startDate, endDate),
+          usageCount: discountData.usageCount || 0,
+          applyTo: discountData.applyTo || "All",
+          description: discountData.description || ""
+        };
+      });
+      
+      console.log("Formatted promotions:", formattedPromotions);
+      setData(formattedPromotions);
+      setPromotions(formattedPromotions); // Set immediately instead of filtering
+      setPagination({
+        currentPage: responseData.pagination?.currentPage || 1,
+        totalPages: responseData.pagination?.totalPages || 1,
+        pageSize: pagination.pageSize,
+        total: responseData.pagination?.total || 0
+      });
+      
+      // Then apply filters
+      filterPromotions(formattedPromotions);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching promotions:", err);
+      setError("Không thể tải dữ liệu khuyến mãi. Vui lòng thử lại sau.");
+      
+      // Try fallback API for active promotions
+      try {
+        console.log("Attempting to fetch active promotions as fallback...");
+        const fallbackUrl = "http://localhost:3000/discount/active";
+        const fallbackResponse = await fetch(fallbackUrl);
+        
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          
+          if (fallbackData && Array.isArray(fallbackData.data)) {
+            const simplePromotions = fallbackData.data.map(promo => ({
+              id: promo.id,
+              code: promo.code || promo.promotionCode || `PROMO${promo.id}`,
+              name: promo.name || promo.title || `Promotion #${promo.id}`,
+              type: promo.discountType === "fixed" ? "Fixed Amount" : "Percentage",
+              value: parseFloat(promo.discountValue || promo.value || 0),
+              minPurchase: parseFloat(promo.minPurchase || 0),
+              maxDiscount: parseFloat(promo.maxDiscount || 0),
+              startDate: promo.startDate || promo.startTime || new Date().toISOString().split('T')[0],
+              endDate: promo.endDate || promo.endTime || new Date().toISOString().split('T')[0],
+              status: "Active",
+              usageCount: promo.usageCount || 0,
+              applyTo: promo.applyTo || "All",
+              description: promo.description || ""
+            }));
+            
+            setData(simplePromotions);
+            setPromotions(simplePromotions);
+            setError("Chỉ hiển thị khuyến mãi đang hoạt động do lỗi tải dữ liệu đầy đủ.");
+          }
+        }
+      } catch (fallbackErr) {
+        console.error("Fallback fetch also failed:", fallbackErr);
+      }
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+  
+  // Determine status based on dates
+  const determineStatus = (startDate, endDate) => {
+    const today = new Date();
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+    
+    if (!start || !end) return "Unknown";
+    
+    if (today < start) return "Scheduled";
+    if (today > end) return "Expired";
+    return "Active";
+  };
   
   // API calls for data management
-  const handleDelete = (id) => {
-    setDelete(!Delete);
-    const updateData = data.filter((item) => item.id != id);
-    setData(updateData);
-    filterPromotions(updateData);
+  const handleDelete = async (id) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa khuyến mãi này không?")) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:3000/discount/delete/${id}`, {
+        method: "DELETE"
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      // Update local state
+      const updatedData = data.filter(item => item.id !== id);
+      setData(updatedData);
+      filterPromotions(updatedData);
+      alert("Xóa khuyến mãi thành công!");
+    } catch (error) {
+      console.error("Error deleting promotion:", error);
+      alert(`Lỗi: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddPromotion = (newPromotion) => {
-    let updatedPromotions = [
-      newPromotion,
-      ...data.filter((promotion) => promotion.id != newPromotion.id),
-    ];
-    setData(updatedPromotions);
-    filterPromotions(updatedPromotions);
+  const handleAddPromotion = async (newPromotion) => {
+    try {
+      setLoading(true);
+      
+      // Format data for API based on existing database schema
+      const promotionData = {
+        name: newPromotion.name,
+        type: newPromotion.type === "Percentage" ? "percentage" : "fixed",
+        description: newPromotion.description,
+        quantity: newPromotion.quantity || 0,
+        discountValue: newPromotion.value,
+        startDate: newPromotion.startDate,
+        endDate: newPromotion.endDate
+      };
+      
+      let response;
+      
+      if (newPromotion.id) {
+        // Edit existing promotion
+        response = await fetch(`http://localhost:3000/discount/edit/${newPromotion.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(promotionData)
+        });
+      } else {
+        // Add new promotion
+        response = await fetch("http://localhost:3000/discount/add", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(promotionData)
+        });
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      // Refresh data
+      fetchPromotions();
+      setIsModalOpen(false);
+      alert(newPromotion.id ? "Cập nhật khuyến mãi thành công!" : "Thêm khuyến mãi thành công!");
+    } catch (error) {
+      console.error("Error saving promotion:", error);
+      alert(`Lỗi: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Table configuration
@@ -141,7 +293,7 @@ const Promotions = () => {
     return localStorage.getItem("keyPromotionScope") || applicationScope[0].value;
   });
 
-  const filterPromotions = (dataToFilter) => {
+  const filterPromotions = (dataToFilter = data) => {
     let filtered = dataToFilter;
 
     // Filter by status
@@ -192,8 +344,12 @@ const Promotions = () => {
   }).length;
 
   useEffect(() => {
-    filterPromotions(data);
-  }, [defaultStatus, defaultType, defaultScope, searchTerm]);
+    fetchPromotions();
+  }, [pagination.currentPage]);
+  
+  useEffect(() => {
+    filterPromotions();
+  }, [defaultStatus, defaultType, defaultScope, searchTerm, data]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 

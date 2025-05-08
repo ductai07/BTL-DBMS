@@ -1,9 +1,13 @@
 const Model = require('../model/associations');
 const { Op } = require('sequelize');
+const sequelize = require('../config/database');
 
 // Lấy danh sách khuyến mãi với tìm kiếm, sắp xếp, phân trang
 module.exports.index = async (req, res) => {
     try {
+        console.log("Endpoint: /discount");
+        console.log("Request query params:", req.query);
+        
         // Lấy các tham số từ query
         const { SearchKey, SearchValue, SortKey, SortValue, Page, Limit, status } = req.query;
 
@@ -14,67 +18,105 @@ module.exports.index = async (req, res) => {
         let limit = Limit ? parseInt(Limit) : 10;
         let offset = (page - 1) * limit;
 
-        // Lọc theo trạng thái (đang hoạt động, hết hạn, chưa đến hạn)
-        if (status) {
-            const currentDate = new Date();
+        // Xử lý lọc theo trạng thái
+        console.log("Status filter:", status);
+        
+        if (status && status !== 'all') {
+            const today = new Date();
             
             if (status === 'active') {
+                // Đang hoạt động: startDate <= today <= endDate
                 where = {
                     ...where,
-                    startDate: { [Op.lte]: currentDate },
-                    endDate: { [Op.gte]: currentDate },
-                    quantity: { [Op.gt]: 0 }
+                    startDate: { [Op.lte]: today },
+                    endDate: { [Op.gte]: today }
                 };
             } else if (status === 'expired') {
+                // Đã kết thúc: endDate < today
                 where = {
                     ...where,
-                    [Op.or]: [
-                        { endDate: { [Op.lt]: currentDate } },
-                        { quantity: 0 }
-                    ]
+                    endDate: { [Op.lt]: today }
                 };
             } else if (status === 'upcoming') {
+                // Sắp tới: startDate > today
                 where = {
                     ...where,
-                    startDate: { [Op.gt]: currentDate }
+                    startDate: { [Op.gt]: today }
                 };
             }
         }
 
         // Xử lý tìm kiếm
         if (SearchKey && SearchValue) {
-            where = {
-                ...where,
-                [SearchKey]: {
-                    [Op.like]: `%${SearchValue}%`
-                }
-            };
+            try {
+                where = {
+                    ...where,
+                    [SearchKey]: {
+                        [Op.like]: `%${SearchValue}%`
+                    }
+                };
+            } catch (error) {
+                console.error("Error with search parameters:", error.message);
+                // Continue without search if there's an error
+            }
         }
+
+        console.log("Final where clause:", where);
+        console.log("Limit:", limit, "Offset:", offset);
 
         // Xử lý sắp xếp
         if (SortKey && SortValue) {
             order = [[SortKey, SortValue.toUpperCase()]];
         } else {
-            order = [['startDate', 'DESC']]; // Sắp xếp mặc định theo ngày bắt đầu mới nhất
+            // Default sorting by start date (newest first)
+            order = [['startDate', 'DESC']];
         }
 
+        console.log("Starting query for discounts...");
+        
         // Thực hiện truy vấn
-        const { count, rows } = await Model.Discount.findAndCountAll({
+        const result = await Model.Discount.findAndCountAll({
             where,
             order,
             limit,
             offset
         });
+        
+        console.log(`Found ${result.count} discounts`);
+
+        // Normalize the data structure for frontend
+        const normalizedData = result.rows.map(item => {
+            const plain = item.get ? item.get({ plain: true }) : item;
+            
+            // Calculate status based on dates
+            const calculatedStatus = determineStatus(plain.startDate, plain.endDate);
+            
+            // Return a normalized discount object
+            return {
+                id: plain.id,
+                name: plain.name || '',
+                type: plain.type || 'percentage',
+                description: plain.description || '',
+                quantity: plain.quantity || 0,
+                discountValue: plain.discountValue || 0,
+                startDate: plain.startDate || new Date(),
+                endDate: plain.endDate || new Date(),
+                status: calculatedStatus
+            };
+        });
+
+        console.log(`Returning ${normalizedData.length} promotions`);
 
         // Tính toán thông tin phân trang
-        const totalPages = Math.ceil(count / limit);
+        const totalPages = Math.ceil(result.count / limit);
         const hasNext = page < totalPages;
         const hasPrevious = page > 1;
 
+        // Trả về kết quả
         res.status(200).json({
-            data: rows,
+            data: normalizedData,
             pagination: {
-                total: count,
+                total: result.count,
                 totalPages,
                 currentPage: page,
                 pageSize: limit,
@@ -83,9 +125,71 @@ module.exports.index = async (req, res) => {
             }
         });
     } catch (error) {
+        console.error("Global error in discount index:", error);
         res.status(500).json({
             message: 'Error retrieving discounts',
-            error: error.message
+            error: error.message,
+            data: [], // Return empty array instead of failing
+            pagination: {
+                total: 0,
+                totalPages: 0,
+                currentPage: 1,
+                pageSize: 10,
+                hasNext: false,
+                hasPrevious: false
+            }
+        });
+    }
+};
+
+// Helper function to determine promotion status
+function determineStatus(startDate, endDate) {
+    const today = new Date();
+    startDate = startDate ? new Date(startDate) : null;
+    endDate = endDate ? new Date(endDate) : null;
+    
+    if (!startDate || !endDate) return "unknown";
+    
+    if (today < startDate) return "upcoming";
+    if (today > endDate) return "expired";
+    return "active";
+}
+
+// Endpoint for getting just active promotions
+module.exports.getActive = async (req, res) => {
+    try {
+        console.log("Endpoint: /discount/active");
+        
+        const today = new Date();
+        
+        // Get active discounts
+        const discounts = await Model.Discount.findAll({
+            where: {
+                startDate: { [Op.lte]: today },
+                endDate: { [Op.gte]: today }
+            },
+            order: [['startDate', 'DESC']]
+        });
+        
+        const activeDiscounts = discounts.map(d => {
+            const plain = d.get({ plain: true });
+            return {
+                ...plain,
+                status: 'active'
+            };
+        });
+        
+        console.log(`Found ${activeDiscounts.length} active discounts`);
+        
+        res.status(200).json({
+            data: activeDiscounts
+        });
+    } catch (error) {
+        console.error("Error in getActive:", error.message);
+        res.status(500).json({
+            message: 'Error retrieving active promotions',
+            error: error.message,
+            data: [] // Return empty array instead of failing
         });
     }
 };

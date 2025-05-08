@@ -1,13 +1,21 @@
-<<<<<<< HEAD
 import { FaSearch } from "react-icons/fa";
 
 const Search = ({ placeholder, setSearch, search, queryRef, keySearch = "title" }) => {
   const handleChange = (e) => {
     const value = e.target.value;
     setSearch(value);
-    if (queryRef) {
-      queryRef.current.SearchKey = keySearch;
-      queryRef.current.SearchValue = value;
+    
+    // Update query ref if available
+    if (queryRef && queryRef.current) {
+      if (value.trim() === "") {
+        // Clear search parameters if empty
+        queryRef.current.SearchKey = "";
+        queryRef.current.SearchValue = "";
+      } else {
+        // Set search parameters
+        queryRef.current.SearchKey = keySearch;
+        queryRef.current.SearchValue = value;
+      }
     }
   };
 
@@ -24,23 +32,7 @@ const Search = ({ placeholder, setSearch, search, queryRef, keySearch = "title" 
         placeholder={placeholder}
       />
     </div>
-=======
-const Search = ({ placeholder, setSearch, search, keySearch, queryRef }) => {
-  const handleChange = (e) => {
-    setSearch(e.target.value);
-    queryRef.current.SearchKey = keySearch;
-    queryRef.current.SearchValue = e.target.value;
-  };
-  return (
-    <input
-      className="h-7 w-44 rounded-md border border-solid border-gray-400 text-sm font-medium px-2"
-      type="text"
-      onChange={(e) => handleChange(e)}
-      value={search}
-      placeholder={placeholder}
-    />
->>>>>>> 626958eeea26f3e633d93420202198f4651be05c
   );
 };
 
-export default Search;
+export default Search;  

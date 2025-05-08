@@ -11,6 +11,7 @@ const Rooms = () => {
   const [pagination, setPagination] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [search, setSearch] = useState("");
   const [cinemaOptions, setCinemaOptions] = useState([
     { key: "", value: "Tất cả" }
   ]);
@@ -156,9 +157,9 @@ const Rooms = () => {
       });
   };
 
-  // Khong lien quan
+  // Room types options
   const roomsTypes = [
-    { key: "all", value: "Tất cả" },
+    { key: "", value: "Tất cả" },
     { key: "standard", value: "Standard" },
     { key: "vip", value: "VIP" },
     { key: "imax", value: "IMAX" },
@@ -178,10 +179,10 @@ const Rooms = () => {
   ];
 
   const [defaultCinemas, setDefaultCinemas] = useState(
-    () => localStorage.getItem("keyCinemas") || cinemaOptions[0].value
+    () => localStorage.getItem("keyCinemas") || ""
   );
   const [defaultRoomTypes, setDefaultRoomTypes] = useState(
-    () => localStorage.getItem("keyRoomTypes") || roomsTypes[0].value
+    () => localStorage.getItem("keyRoomTypes") || ""
   );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -209,9 +210,20 @@ const Rooms = () => {
   const handleSearch = async () => {
     setIsLoading(true);
     try {
+      // Ensure current page is set in query
       queryRef.current.Page = currentPage;
-      const queryString = new URLSearchParams(queryRef.current).toString();
+      
+      // Clean up empty parameters to avoid unnecessary URL parameters
+      const cleanParams = {};
+      for (const [key, value] of Object.entries(queryRef.current)) {
+        if (value !== "" && value !== null && value !== undefined) {
+          cleanParams[key] = value;
+        }
+      }
+      
+      const queryString = new URLSearchParams(cleanParams).toString();
       console.log("Searching with query:", queryString);
+      
       const response = await fetch(`http://localhost:3000/room?${queryString}`);
       
       if (!response.ok) {
@@ -219,19 +231,35 @@ const Rooms = () => {
       }
       
       const data = await response.json();
-      setRooms(data.data);
-      setPagination(data.pagination);
+      setRooms(data.data || []);
+      setPagination(data.pagination || {
+        currentPage: 1,
+        totalPages: 1,
+        total: data.data?.length || 0
+      });
     } catch (error) {
       console.error("Error searching rooms:", error);
+      // Show empty results in case of error
+      setRooms([]);
+      setPagination({
+        currentPage: 1,
+        totalPages: 1,
+        total: 0
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-
+  // Handle page changes only
   useEffect(() => {
-    handleSearch();
-  }, [currentPage, search, defaultCinemas, defaultRoomTypes]);
+    if (queryRef.current) {
+      queryRef.current.Page = currentPage;
+      handleSearch();
+    }
+  }, [currentPage]);
+
+  // Don't auto-trigger search on other filter changes - let the user press the search button
 
   const handleReset = () => {
     // Reset all search parameters
@@ -246,10 +274,17 @@ const Rooms = () => {
       type: ""
     };
     
+    // Reset state values
     setSearch("");
-    setDefaultCinemas(cinemaOptions[0].value);
-    setDefaultRoomTypes(roomsTypes[0].value);
+    setDefaultCinemas("");
+    setDefaultRoomTypes("");
     setCurrentPage(1);
+    
+    // Save to localStorage
+    if (localStorage) {
+      localStorage.removeItem("keyCinemas");
+      localStorage.removeItem("keyRoomTypes");
+    }
     
     // Trigger a new search with reset parameters
     handleSearch();
@@ -281,6 +316,11 @@ const Rooms = () => {
                   keyStorage={"keyCinemas"}
                   queryRef={queryRef}
                   keySearch={"cinemaId"}
+                  onChange={(value) => {
+                    queryRef.current.cinemaId = value;
+                    setDefaultCinemas(value);
+                    handleSearch();
+                  }}
                 />
               </div>
               <div>
@@ -292,6 +332,11 @@ const Rooms = () => {
                   keyStorage={"keyRoomTypes"}
                   queryRef={queryRef}
                   keySearch={"type"}
+                  onChange={(value) => {
+                    queryRef.current.type = value;
+                    setDefaultRoomTypes(value);
+                    handleSearch();
+                  }}
                 />
               </div>
             </div>
@@ -301,6 +346,12 @@ const Rooms = () => {
                 onClick={handleReset}
               >
                 Đặt lại bộ lọc
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center"
+                onClick={handleSearch}
+              >
+                Tìm kiếm
               </button>
             </div>
           </div>
@@ -358,7 +409,7 @@ const Rooms = () => {
         infoRoom={infoRoom}
         setInfoRoom={setInfoRoom}
       />
-    </>
+    </div>
   );
 };
 

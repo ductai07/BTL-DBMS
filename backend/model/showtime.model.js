@@ -26,10 +26,12 @@ const ShowTime = sequelize.define('ShowTime', {
   movie_id: {
     type: DataTypes.INTEGER,
     allowNull: true
-  }
+  },
+
 }, {
   tableName: 'ShowTime',
   timestamps: false
 });
+
 
 module.exports = ShowTime;

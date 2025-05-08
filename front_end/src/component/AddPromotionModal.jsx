@@ -19,30 +19,25 @@ const AddPromotionModal = ({
   useEffect(() => {
     if (!isOpen) {
       setInfo({
-        code: "",
         name: "",
         type: "",
-        value: 0,
-        minPurchase: 0,
-        maxDiscount: 0,
+        discountValue: 0,
         startDate: "",
         endDate: "",
-        status: "",
-        usageCount: 0,
-        applyTo: "",
+        quantity: 0,
         description: "",
         id: Date.now(),
       });
       setPreviewSample(100000);
     } else {
-      calculatePreview(info.type, info.value, previewSample, info.maxDiscount);
+      calculatePreview(info.type, info.discountValue, previewSample);
     }
   }, [isOpen, setInfo]);
 
   // Calculate preview discount when inputs change
   useEffect(() => {
-    calculatePreview(info.type, info.value, previewSample, info.maxDiscount);
-  }, [info.type, info.value, previewSample, info.maxDiscount]);
+    calculatePreview(info.type, info.discountValue, previewSample);
+  }, [info.type, info.discountValue, previewSample]);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -58,55 +53,27 @@ const AddPromotionModal = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Generate a code if not provided (for new promotions)
-    let code = info.code;
-    if (!code) {
-      const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const namePart = info.name.substring(0, 4).toUpperCase();
-      code = `${namePart}${randomPart}`;
-    }
-    
     onAddPromotion({
       ...info,
-      code,
-      usageCount: info.usageCount || 0,
+      quantity: info.quantity || 0,
       id: info.id || Date.now(),
     });
     onClose();
   };
 
   // Calculate discount based on type and preview amount
-  const calculatePreview = (type, value, sampleAmount, maxDiscount) => {
-    if (!type || !value || !sampleAmount) {
+  const calculatePreview = (type, discountValue, sampleAmount) => {
+    if (!type || !discountValue || !sampleAmount) {
       setPreviewDiscount(0);
       return;
     }
     
     if (type === "Percentage") {
-      const discountAmount = sampleAmount * (value / 100);
-      const finalDiscount = maxDiscount > 0 ? Math.min(discountAmount, maxDiscount) : discountAmount;
-      setPreviewDiscount(finalDiscount);
+      const discountAmount = sampleAmount * (discountValue / 100);
+      setPreviewDiscount(discountAmount);
     } else {
       // For fixed amount, the discount is just the value
-      setPreviewDiscount(value);
-    }
-  };
-  
-  // Generate coupon code suggestion
-  const generateCouponCode = () => {
-    if (!info.name) {
-      alert("Please enter a promotion name first");
-      return;
-    }
-    
-    const namePart = info.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase();
-    const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-    
-    if (info.type === "Percentage") {
-      setInfo({ ...info, code: `${namePart}${info.value}${randomPart}` });
-    } else {
-      const valueK = Math.floor(info.value / 1000);
-      setInfo({ ...info, code: `${namePart}${valueK}K${randomPart}` });
+      setPreviewDiscount(discountValue);
     }
   };
 
@@ -143,26 +110,18 @@ const AddPromotionModal = ({
                 </div>
                 <div>
                   <label className="block text-gray-700 text-sm font-medium mb-1">
-                    Promotion Code *
+                    Quantity Available *
                   </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      name="code"
-                      value={info.code || ''}
-                      onChange={handleChange}
-                      placeholder="e.g. SUMMER25"
-                      className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    />
-                    <button 
-                      type="button" 
-                      onClick={generateCouponCode}
-                      className="bg-gray-200 text-gray-700 px-3 py-2 rounded-md text-xs hover:bg-gray-300"
-                      title="Generate code based on name"
-                    >
-                      Generate
-                    </button>
-                  </div>
+                  <input
+                    type="number"
+                    name="quantity"
+                    value={info.quantity || ''}
+                    onChange={handleChange}
+                    placeholder="e.g. 100"
+                    className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    min="0"
+                    required
+                  />
                 </div>
               </div>
               
@@ -196,7 +155,7 @@ const AddPromotionModal = ({
                 >
                   <option value="">Select Type</option>
                   <option value="Percentage">Percentage</option>
-                  <option value="Fixed Amount">Fixed Amount</option>
+                  <option value="Fixed">Fixed Amount</option>
                 </select>
               </div>
 
@@ -206,8 +165,8 @@ const AddPromotionModal = ({
                 </label>
                 <input
                   type="number"
-                  name="value"
-                  value={info.value || ''}
+                  name="discountValue"
+                  value={info.discountValue || ''}
                   onChange={handleChange}
                   placeholder={info.type === "Percentage" ? "e.g. 25" : "e.g. 50000"}
                   className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -216,63 +175,11 @@ const AddPromotionModal = ({
                   max={info.type === "Percentage" ? "100" : ""}
                 />
               </div>
-
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-medium mb-1">
-                  Minimum Purchase Amount (VND)
-                </label>
-                <input
-                  type="number"
-                  name="minPurchase"
-                  value={info.minPurchase || ''}
-                  onChange={handleChange}
-                  placeholder="e.g. 100000"
-                  className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  min="0"
-                />
-                <p className="text-xs text-gray-500 mt-1">Leave as 0 for no minimum</p>
-              </div>
-
-              {info.type === "Percentage" && (
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-medium mb-1">
-                    Maximum Discount Amount (VND)
-                  </label>
-                  <input
-                    type="number"
-                    name="maxDiscount"
-                    value={info.maxDiscount || ''}
-                    onChange={handleChange}
-                    placeholder="e.g. 50000"
-                    className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    min="0"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Leave as 0 for no maximum</p>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-gray-700 text-sm font-medium mb-1">
-                  Apply To *
-                </label>
-                <select
-                  name="applyTo"
-                  value={info.applyTo || ''}
-                  onChange={handleChange}
-                  className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  required
-                >
-                  <option value="">Select Scope</option>
-                  <option value="All">All Items</option>
-                  <option value="Tickets">Tickets Only</option>
-                  <option value="Food & Drinks">Food & Drinks Only</option>
-                </select>
-              </div>
             </div>
-            
-            <div>
-              <h4 className="font-medium text-gray-700 mb-3 pb-2 border-b">Validity & Status</h4>
 
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3 pb-2 border-b">Validity Period</h4>
+              
               <div className="mb-4">
                 <label className="block text-gray-700 text-sm font-medium mb-1">
                   Start Date *
@@ -286,7 +193,7 @@ const AddPromotionModal = ({
                   required
                 />
               </div>
-
+              
               <div className="mb-4">
                 <label className="block text-gray-700 text-sm font-medium mb-1">
                   End Date *
@@ -298,72 +205,74 @@ const AddPromotionModal = ({
                   onChange={handleChange}
                   className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
                   required
-                  min={info.startDate}
                 />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 text-sm font-medium mb-1">
-                  Status *
-                </label>
-                <select
-                  name="status"
-                  value={info.status || ''}
-                  onChange={handleChange}
-                  className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  required
-                >
-                  <option value="">Select Status</option>
-                  <option value="Active">Active</option>
-                  <option value="Scheduled">Scheduled</option>
-                  <option value="Disabled">Disabled</option>
-                </select>
-              </div>
-
-              {/* Preview Calculator */}
-              <div className="mt-6 p-4 bg-blue-50 rounded-md">
-                <h5 className="font-medium text-blue-800 mb-2">Discount Preview</h5>
-                <div className="flex items-center mb-2">
-                  <label className="text-sm text-gray-700 mr-2">Sample Order:</label>
-                  <input
-                    type="number"
-                    value={previewSample}
-                    onChange={(e) => setPreviewSample(Number(e.target.value) || 0)}
-                    className="border border-gray-300 rounded-md p-1 w-24 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    min="0"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-gray-600">Original Price:</div>
-                  <div className="font-medium text-right">{formatCurrency(previewSample)}</div>
-                  <div className="text-gray-600">Discount:</div>
-                  <div className="font-medium text-right text-green-600">- {formatCurrency(previewDiscount)}</div>
-                  <div className="text-gray-700 font-medium">Final Price:</div>
-                  <div className="font-bold text-right">{formatCurrency(Math.max(0, previewSample - previewDiscount))}</div>
-                </div>
-                
-                {info.minPurchase > 0 && previewSample < info.minPurchase && (
-                  <div className="mt-2 text-sm text-yellow-600">
-                    ⚠️ Minimum purchase amount not met
-                  </div>
-                )}
               </div>
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end border-t pt-4">
+          <div className="mt-6 border-t border-gray-200 pt-4">
+            <h4 className="font-medium text-gray-700 mb-3">Discount Preview</h4>
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-medium mb-1">
+                  Sample Purchase Amount (VND)
+                </label>
+                <input
+                  type="number"
+                  value={previewSample}
+                  onChange={(e) => setPreviewSample(parseFloat(e.target.value) || 0)}
+                  className="border border-gray-300 rounded-md p-2 w-full md:w-1/3 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  min="0"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Discount Type:</p>
+                  <p className="font-medium">{info.type || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Discount Value:</p>
+                  <p className="font-medium">
+                    {info.type === "Percentage" 
+                      ? `${info.discountValue || 0}%` 
+                      : formatCurrency(info.discountValue || 0, "VND")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Sample Purchase:</p>
+                  <p className="font-medium">{formatCurrency(previewSample, "VND")}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Discount Amount:</p>
+                  <p className="font-medium">{formatCurrency(previewDiscount, "VND")}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Final Price:</p>
+                  <p className="font-medium text-green-600">{formatCurrency(previewSample - previewDiscount, "VND")}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Total Quantity:</p>
+                  <p className="font-medium">{info.quantity || 0}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-6 flex justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400 mr-2"
+              className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 mr-2"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
             >
-              {Entry}
+              {info.id ? "Update Promotion" : "Add Promotion"}
             </button>
           </div>
         </form>

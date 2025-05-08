@@ -1,12 +1,15 @@
 const Model = require('../model/associations');
 const { Op } = require('sequelize');
-const sequelize = require('../config/database'); // Thêm dòng này
+const sequelize = require('../config/database');
+
 // Lấy danh sách lịch chiếu với tìm kiếm, sắp xếp, phân trang
 module.exports.index = async (req, res) => {
     try {
+        console.log("Endpoint: /showtime");
+        console.log("Request query params:", req.query);
+        
         // Lấy các tham số từ query
-        const { SearchKey, SearchValue, SortKey, SortValue, Page, Limit, movie_id, cinema_id, date, status } = req.query;
-        console.log("Request parameters:", { SearchKey, SearchValue, SortKey, SortValue, Page, Limit, movie_id, cinema_id, date, status });
+        const { SearchKey, SearchValue, SortKey, SortValue, Page, Limit, movie_id, cinema_id, date } = req.query;
 
         // Khởi tạo các biến mặc định
         let where = {};
@@ -25,27 +28,6 @@ module.exports.index = async (req, res) => {
             where.showDate = date;
         }
 
-        console.log("Initial where clause:", where);
-
-        // Thêm điều kiện lọc trạng thái nếu có
-        // Chỉ thêm nếu status field tồn tại trong database
-        if (status && status !== 'all') {
-            try {
-                // Kiểm tra schema trước khi thêm điều kiện
-                const showTimeModel = Model.ShowTime;
-                const attributes = Object.keys(showTimeModel.rawAttributes);
-                console.log("ShowTime attributes:", attributes);
-                
-                if (attributes.includes('status')) {
-                    where.status = status;
-                } else {
-                    console.log("Status field not found in model, skipping filter");
-                }
-            } catch (err) {
-                console.log("Error checking status field:", err.message);
-            }
-        }
-
         // Xử lý tìm kiếm
         if (SearchKey && SearchValue) {
             where = {
@@ -57,6 +39,7 @@ module.exports.index = async (req, res) => {
         }
 
         console.log("Final where clause:", where);
+        console.log("Limit:", limit, "Offset:", offset);
 
         // Xử lý sắp xếp
         if (SortKey && SortValue) {
@@ -68,36 +51,6 @@ module.exports.index = async (req, res) => {
             ]; // Sắp xếp mặc định
         }
 
-        console.log("Order clause:", order);
-
-        // Debug: log the ShowTime model structure
-        console.log("ShowTime model structure:");
-        const showTimeAttrs = Object.keys(Model.ShowTime.rawAttributes);
-        console.log("ShowTime attributes:", showTimeAttrs);
-        console.log("ShowTime associations:", Object.keys(Model.ShowTime.associations));
-
-        // Debug: log the Room model structure
-        console.log("Room model structure:");
-        const roomAttrs = Object.keys(Model.Room.rawAttributes);
-        console.log("Room attributes:", roomAttrs);
-        
-        // Kiểm tra các trường dữ liệu cho các model liên quan
-        // Phòng (Room)
-        let roomAttributes = ['id', 'name', 'type'];
-        try {
-            const RoomModel = Model.Room;
-            if (roomAttrs.includes('capacity')) {
-                roomAttributes.push('capacity');
-            }
-            if (roomAttrs.includes('seatCount')) {
-                roomAttributes.push('seatCount');
-            }
-        } catch (err) {
-            console.log("Error checking Room model attributes:", err.message);
-        }
-
-        console.log("Room attributes to include:", roomAttributes);
-
         // Khởi tạo các join conditions
         const includes = [
             {
@@ -106,7 +59,7 @@ module.exports.index = async (req, res) => {
             },
             {
                 model: Model.Room,
-                attributes: roomAttributes,
+                attributes: ['id', 'name', 'type'],
                 include: [
                     {
                         model: Model.Cinema,
@@ -145,17 +98,6 @@ module.exports.index = async (req, res) => {
             console.log(`Query successful. Found ${count} showtimes.`);
         } catch (queryError) {
             console.error("Error in main showtime query:", queryError);
-            console.error("Error details:", queryError.message);
-            if (queryError.original) {
-                console.error("Original error:", queryError.original.message);
-                console.error("SQL state:", queryError.original.state);
-            }
-            if (queryError.sql) {
-                console.error("Generated SQL:", queryError.sql);
-            }
-            if (queryError.parameters) {
-                console.error("Query parameters:", queryError.parameters);
-            }
             
             // Fallback to simpler query if the complex one fails
             console.log("Attempting simpler query without joins...");
@@ -173,93 +115,41 @@ module.exports.index = async (req, res) => {
                 console.log(`Simple query successful. Found ${count} showtimes.`);
             } catch (simpleQueryError) {
                 console.error("Even simple query failed:", simpleQueryError.message);
-                throw simpleQueryError; // Re-throw to be caught by outer catch
+                
+                // Return empty results instead of failing
+                count = 0;
+                rows = [];
             }
         }
 
-        console.log("Query completed, processing results...");
+        console.log(`Returning ${rows.length} showtime rows`);
 
-        // Đếm số vé đã bán cho mỗi lịch chiếu
-        const showtimeIds = rows.map(showtime => showtime.id);
-        let soldTicketCounts = {};
-        
-        if (showtimeIds.length > 0) {
-            try {
-                const ticketCounts = await Model.Ticket.findAll({
-                    attributes: [
-                        'showtime_id',
-                        [sequelize.fn('COUNT', sequelize.col('id')), 'ticketCount']
-                    ],
-                    where: { showtime_id: { [Op.in]: showtimeIds } },
-                    group: ['showtime_id'],
-                    raw: true
-                });
-                
-                // Chuyển đổi kết quả thành object để dễ truy cập
-                ticketCounts.forEach(item => {
-                    soldTicketCounts[item.showtime_id] = parseInt(item.ticketCount);
-                });
-                
-                console.log("Ticket counts retrieved successfully");
-            } catch (err) {
-                console.log("Error counting tickets:", err.message);
-                // Continue without ticket counts rather than failing completely
-            }
-        }
-
-        // Định dạng lại dữ liệu cho frontend
-        const formattedShowtimes = rows.map(showtime => {
-            const plain = showtime.get({ plain: true });
+        // Process showtimes to match expected frontend format
+        const processedShowtimes = rows.map(showtime => {
+            const plainShowtime = showtime.get ? showtime.get({ plain: true }) : showtime;
             
-            // Xác định trạng thái dựa trên ngày nếu không có trường status
-            let status = "Unknown";
-            try {
-                if (plain.status) {
-                    status = plain.status;
-                } else {
-                    // Tính toán trạng thái dựa trên ngày
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    
-                    const showtimeDate = new Date(plain.showDate);
-                    
-                    if (showtimeDate < today) {
-                        status = "Đã chiếu";
-                    } else if (showtimeDate > today) {
-                        status = "Sắp chiếu";
-                    } else {
-                        status = "Đang chiếu";
-                    }
-                }
-            } catch (err) {
-                console.log("Error calculating status:", err.message);
-            }
+            // Extract related data from nested objects
+            const movie = plainShowtime.Movie || {};
+            const room = plainShowtime.Room || {};
+            const cinema = room.Cinema || {};
             
-            // Xác định capacity từ room
-            let roomCapacity = 0;
-            if (plain.Room) {
-                roomCapacity = plain.Room.capacity || plain.Room.seatCount || 0;
-            }
+            // Calculate showtime status based on date
+            const status = determineShowtimeStatus(plainShowtime.showDate, plainShowtime.startTime);
             
+            // Format as needed for the frontend
             return {
-                id: plain.id,
-                title: plain.Movie?.title || "Unknown",
-                cinema: plain.Room?.Cinema?.name || "Unknown",
-                room: plain.Room?.name || "Unknown",
-                date: plain.showDate,
-                time: plain.startTime?.substring(0, 5) || "",
-                status: status,
-                tickets: {
-                    sold: soldTicketCounts[plain.id] || 0,
-                    total: roomCapacity
-                },
-                price: plain.price,
-                // Thêm dữ liệu gốc để chi tiết
-                originalData: plain
+                id: plainShowtime.id,
+                movie_id: plainShowtime.movie_id,
+                room_id: plainShowtime.room_id,
+                showDate: plainShowtime.showDate,
+                startTime: plainShowtime.startTime,
+                endTime: plainShowtime.endTime,
+                // Include these fields even if null to prevent frontend errors
+                Movie: movie,
+                Room: room,
+                status: status
             };
         });
-
-        console.log(`Formatted ${formattedShowtimes.length} showtimes for response`);
 
         // Tính toán thông tin phân trang
         const totalPages = Math.ceil(count / limit);
@@ -267,7 +157,7 @@ module.exports.index = async (req, res) => {
         const hasPrevious = page > 1;
 
         const response = {
-            data: formattedShowtimes,
+            data: processedShowtimes,
             pagination: {
                 total: count,
                 totalPages,
@@ -278,28 +168,129 @@ module.exports.index = async (req, res) => {
             }
         };
 
-        console.log("Sending response:", { 
-            total: count, 
-            totalPages, 
-            currentPage: page,
-            resultCount: formattedShowtimes.length 
-        });
-
+        console.log("Response pagination:", response.pagination);
         res.status(200).json(response);
     } catch (error) {
-        console.error("ShowTime index error:", error);
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-        
-        if (error.original) {
-            console.error("Original error:", error.original.message);
-            console.error("SQL state:", error.original.state);
-        }
-
+        console.error("Global error in showtime index:", error);
         res.status(500).json({
             message: 'Error retrieving showtimes',
             error: error.message,
-            details: error.original ? error.original.message : 'No additional details'
+            data: [],
+            pagination: {
+                total: 0,
+                totalPages: 0,
+                currentPage: 1,
+                pageSize: 10,
+                hasNext: false,
+                hasPrevious: false
+            }
+        });
+    }
+};
+
+// Helper function to determine showtime status based on date
+function determineShowtimeStatus(showDate, startTime) {
+    if (!showDate) return "Sắp chiếu";
+    
+    const today = new Date();
+    const showtimeDate = new Date(showDate);
+    
+    // Reset today's time to 00:00:00 for date comparison
+    today.setHours(0, 0, 0, 0);
+    showtimeDate.setHours(0, 0, 0, 0);
+    
+    // If showtime is in the past
+    if (showtimeDate < today) {
+        return "Đã chiếu";
+    }
+    
+    // If showtime is in the future
+    if (showtimeDate > today) {
+        return "Sắp chiếu";
+    }
+    
+    // If showtime is today, check the time
+    if (startTime) {
+        const now = new Date();
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const showtimeToday = new Date();
+        showtimeToday.setHours(hours, minutes, 0, 0);
+        
+        if (now > showtimeToday) {
+            return "Đang chiếu";
+        } else {
+            return "Sắp chiếu";
+        }
+    }
+    
+    return "Sắp chiếu";
+}
+
+// Simple showtime endpoint without complex joins (for fallback)
+module.exports.simple = async (req, res) => {
+    try {
+        console.log("Endpoint: /showtime/simple");
+        console.log("Request query params:", req.query);
+        
+        const { Page, Limit } = req.query;
+        let page = Page ? parseInt(Page) : 1;
+        let limit = Limit ? parseInt(Limit) : 10;
+        let offset = (page - 1) * limit;
+        
+        console.log("Page:", page, "Limit:", limit, "Offset:", offset);
+        
+        // Simple query directly against the model
+        const showtimes = await Model.ShowTime.findAll({
+            limit,
+            offset,
+            order: [
+                ['showDate', 'ASC'],
+                ['startTime', 'ASC']
+            ]
+        });
+        
+        // Count total for pagination
+        const count = await Model.ShowTime.count();
+        
+        // Convert to plain objects and add calculated status
+        const plainShowtimes = showtimes.map(st => {
+            const plain = st.get ? st.get({ plain: true }) : st;
+            return {
+                ...plain,
+                status: determineShowtimeStatus(plain.showDate, plain.startTime)
+            };
+        });
+        
+        console.log(`Simple query found ${plainShowtimes.length} showtimes`);
+        
+        // Calculate pagination
+        const totalPages = Math.ceil(count / limit);
+        
+        res.status(200).json({
+            data: plainShowtimes,
+            pagination: {
+                total: count,
+                totalPages,
+                currentPage: page,
+                pageSize: limit,
+                hasNext: page < totalPages,
+                hasPrevious: page > 1
+            }
+        });
+    } catch (error) {
+        console.error("Error in simple showtime endpoint:", error);
+        res.status(500).json({
+            message: 'Error retrieving simple showtimes',
+            error: error.message,
+            data: [], // Return empty array instead of failing
+            pagination: {
+                total: 0,
+                totalPages: 0,
+                currentPage: 1,
+                pageSize: 10,
+                hasNext: false,
+                hasPrevious: false
+            }
         });
     }
 };

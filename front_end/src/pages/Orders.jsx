@@ -39,9 +39,10 @@ const Orders = () => {
       
       // Add search term if applicable
       if (searchTerm) {
-        url += `&SearchKey=customerName&SearchValue=${encodeURIComponent(searchTerm)}`;
+        url += `&SearchKey=note&SearchValue=${encodeURIComponent(searchTerm)}`;
       }
       
+      console.log("Fetching orders from:", url);
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -49,16 +50,16 @@ const Orders = () => {
       }
       
       const data = await response.json();
+      console.log("Received orders data:", data);
       
       // Format data for the component
       const formattedOrders = (data.data || []).map(invoice => ({
         id: invoice.id,
-        date: formatDate(invoice.date),
-        customer: invoice.Customer ? `${invoice.Customer.name} (${invoice.Customer.phone})` : "Khách vãng lai",
-        total: invoice.total,
+        date: formatDate(invoice.createDate),
+        customer: formatCustomer(invoice.Customer, invoice.customer_id, invoice.note),
+        total: invoice.totalAmount,
         status: invoice.status,
-        products: invoice.ProductUsages?.length || 0,
-        ticketId: invoice.ticket_id,
+        products: (invoice.ProductUsages?.length || 0),
         // Keep original data for reference
         originalData: invoice
       }));
@@ -71,9 +72,12 @@ const Orders = () => {
         pageSize: data.pagination?.pageSize || 10,
         total: data.pagination?.total || 0
       });
+      setError(null);
     } catch (err) {
       console.error("Error fetching orders:", err);
       setError("Không thể tải dữ liệu đơn hàng. Vui lòng thử lại sau.");
+      setOrders([]);
+      setFilteredOrders([]);
     } finally {
       setLoading(false);
     }
@@ -82,7 +86,7 @@ const Orders = () => {
   // Load initial data
   useEffect(() => {
     fetchOrders();
-  }, [pagination.currentPage, statusFilter]);
+  }, [pagination.currentPage, statusFilter, searchTerm]);
 
   // Format date function (YYYY-MM-DD to DD/MM/YYYY)
   const formatDate = (dateString) => {
@@ -97,51 +101,33 @@ const Orders = () => {
     return `${day}/${month}/${year}`;
   };
 
-  // Handle order search
-  useEffect(() => {
-    if (searchTerm === "") {
-      setFilteredOrders(orders);
+  // Format customer information with better fallback
+  const formatCustomer = (customer, customerId, note) => {
+    if (customer && customer.fullName) {
+      return `${customer.fullName}${customer.phoneNumber ? ` (${customer.phoneNumber})` : ''}`;
+    } else if (customerId) {
+      return `Khách hàng #${customerId}`;
+    } else if (note && note.includes("Customer:")) {
+      return note.replace("Customer:", "").trim();
     } else {
-      const lowerSearch = searchTerm.toLowerCase();
-      const filtered = orders.filter(order => {
-        return (
-          (order.customer && order.customer.toLowerCase().includes(lowerSearch)) ||
-          (order.id.toString().includes(lowerSearch))
-        );
-      });
-      setFilteredOrders(filtered);
+      return "Khách vãng lai";
     }
-  }, [searchTerm, orders]);
-
-  // Handle status filter change
-  const handleStatusFilterChange = (status) => {
-    setStatusFilter(status);
-    // Resetting to page 1 since filter changed
-    setPagination(prev => ({
-      ...prev,
-      currentPage: 1
-    }));
-  };
-
-  // Handle page change
-  const handlePageChange = (newPage) => {
-    setPagination(prev => ({
-      ...prev,
-      currentPage: newPage
-    }));
   };
 
   // Fetch order details when opening the details modal
   const fetchOrderDetails = async (orderId) => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3000/invoice/${orderId}/details`);
+      console.log("Fetching order details for ID:", orderId);
+      const response = await fetch(`http://localhost:3000/invoice/detail/${orderId}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
+      console.log("Received order details:", data);
+      
       setOrderDetails(data.data);
     } catch (err) {
       console.error("Error fetching order details:", err);
@@ -160,31 +146,12 @@ const Orders = () => {
   };
 
   // Handle order creation
-  const handleCreateOrder = async (orderData) => {
+  const handleCreateOrder = async () => {
     try {
-      setLoading(true);
-      const response = await fetch('http://localhost:3000/invoice/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(orderData)
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-      
-      // Re-fetch orders
       await fetchOrders();
-      setIsModalOpen(false);
-      alert("Tạo đơn hàng thành công!");
+      alert("Đơn hàng đã được tạo thành công!");
     } catch (err) {
-      console.error("Error creating order:", err);
-      alert(`Không thể tạo đơn hàng: ${err.message}`);
-    } finally {
-      setLoading(false);
+      console.error("Error after creating order:", err);
     }
   };
 
@@ -218,17 +185,28 @@ const Orders = () => {
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3000/invoice/update-status/${orderId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      // If updating to "Đã thanh toán" and current status is "Chưa thanh toán",
+      // call the payment endpoint
+      const order = orders.find(o => o.id === orderId);
+      
+      if (newStatus === "Đã thanh toán" && order.status === "Chưa thanh toán") {
+        const response = await fetch(`http://localhost:3000/invoice/payment/${orderId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ paymentMethod: 'Cash' })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+      } else {
+        // For other status changes, we would need a dedicated endpoint
+        // This should be implemented in the backend
+        throw new Error("Chỉ hỗ trợ chuyển trạng thái sang 'Đã thanh toán'");
       }
       
       // Re-fetch orders
@@ -245,7 +223,7 @@ const Orders = () => {
   // Status options
   const statusOptions = [
     { key: "all", value: "Tất cả trạng thái" },
-    { key: "Đang xử lý", value: "Đang xử lý" },
+    { key: "Chưa thanh toán", value: "Chưa thanh toán" },
     { key: "Đã thanh toán", value: "Đã thanh toán" },
     { key: "Đã hủy", value: "Đã hủy" }
   ];
@@ -266,7 +244,7 @@ const Orders = () => {
           <Select 
             options={statusOptions}
             value={statusFilter}
-            onChange={handleStatusFilterChange}
+            onChange={setStatusFilter}
           />
           
           <button
@@ -290,7 +268,7 @@ const Orders = () => {
       </div>
       
       {/* Content */}
-      {loading ? (
+      {loading && filteredOrders.length === 0 ? (
         <div className="flex justify-center py-10">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
         </div>
@@ -316,7 +294,7 @@ const Orders = () => {
             <div className="flex justify-center mt-6">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handlePageChange(Math.max(1, pagination.currentPage - 1))}
+                  onClick={() => setPagination(prev => ({ ...prev, currentPage: Math.max(1, prev.currentPage - 1) }))}
                   disabled={pagination.currentPage === 1}
                   className={`px-3 py-1 rounded ${pagination.currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
                 >
@@ -335,7 +313,7 @@ const Orders = () => {
                       return (
                         <button
                           key={i}
-                          onClick={() => handlePageChange(i + 1)}
+                          onClick={() => setPagination(prev => ({ ...prev, currentPage: i + 1 }))}
                           className={`w-8 h-8 flex items-center justify-center rounded ${
                             pagination.currentPage === i + 1
                               ? 'bg-blue-600 text-white'
@@ -356,7 +334,7 @@ const Orders = () => {
                 </div>
                 
                 <button
-                  onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.currentPage + 1))}
+                  onClick={() => setPagination(prev => ({ ...prev, currentPage: Math.min(pagination.totalPages, prev.currentPage + 1) }))}
                   disabled={pagination.currentPage === pagination.totalPages}
                   className={`px-3 py-1 rounded ${pagination.currentPage === pagination.totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
                 >

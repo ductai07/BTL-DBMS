@@ -1,5 +1,5 @@
 import { BiSolidPencil } from "react-icons/bi";
-import { MdDelete, MdContentCopy } from "react-icons/md";
+import { MdDelete } from "react-icons/md";
 import { formatCurrency } from "../utils/formatUtils";
 import { format } from "date-fns";
 
@@ -15,12 +15,22 @@ const TablePromotions = ({
     "Active": "bg-green-100 text-green-800",
     "Scheduled": "bg-blue-100 text-blue-800",
     "Expired": "bg-gray-100 text-gray-800",
-    "Disabled": "bg-red-100 text-red-800"
+    "Disabled": "bg-red-100 text-red-800",
+    "upcoming": "bg-blue-100 text-blue-800", // API might return lowercase
+    "active": "bg-green-100 text-green-800",
+    "expired": "bg-gray-100 text-gray-800",
+    "unknown": "bg-gray-100 text-gray-500"
   };
 
   // Format date to readable format
   const formatDate = (dateString) => {
-    return format(new Date(dateString), "dd/MM/yyyy");
+    if (!dateString) return "N/A";
+    try {
+      return format(new Date(dateString), "dd/MM/yyyy");
+    } catch (error) {
+      console.error("Error formatting date:", error, dateString);
+      return "Invalid Date";
+    }
   };
 
   // Format validity period
@@ -29,19 +39,34 @@ const TablePromotions = ({
   };
 
   // Format discount based on type
-  const formatDiscount = (type, value) => {
-    if (type === "Percentage") {
-      return `${value}%`;
+  const formatDiscount = (type, discountValue) => {
+    if (discountValue === null || discountValue === undefined) return "N/A";
+    
+    if (type === "Percentage" || type === "percentage" || type === "percent") {
+      return `${discountValue}%`;
     } else {
-      return formatCurrency(value);
+      return formatCurrency(discountValue);
     }
   };
 
-  // Copy promotion code to clipboard
-  const copyToClipboard = (code) => {
-    navigator.clipboard.writeText(code);
-    // You could add a toast notification here
-    alert(`Copied: ${code}`);
+  // Get display status (capitalize if needed)
+  const getDisplayStatus = (status) => {
+    if (!status) return "Unknown";
+    
+    // If it's already in our expected format
+    if (promotionStatusColor[status]) {
+      return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+    
+    // Otherwise convert
+    switch(status.toLowerCase()) {
+      case "active": return "Active";
+      case "upcoming": 
+      case "scheduled": return "Scheduled";
+      case "expired": return "Expired";
+      case "disabled": return "Disabled";
+      default: return status;
+    }
   };
 
   return (
@@ -67,32 +92,20 @@ const TablePromotions = ({
             >
               <td className="px-4 py-4 text-center">
                 <div className="flex items-center justify-center space-x-1">
-                  <span className="font-mono font-medium">{promotion.code}</span>
-                  <button
-                    onClick={() => copyToClipboard(promotion.code)}
-                    className="text-gray-400 hover:text-blue-500"
-                    title="Copy code"
-                  >
-                    <MdContentCopy size={14} />
-                  </button>
+                  <span className="font-mono font-medium">PROMO{promotion.id}</span>
                 </div>
               </td>
               <td className="px-4 py-4 text-left">
                 <div>
-                  <p className="font-medium text-gray-800">{promotion.name}</p>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-1">{promotion.description}</p>
+                  <p className="font-medium text-gray-800">{promotion.name || "Untitled Promotion"}</p>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-1">{promotion.description || ""}</p>
                 </div>
               </td>
               <td className="px-4 py-4 text-center font-medium">
-                {formatDiscount(promotion.type, promotion.value)}
-                {promotion.minPurchase > 0 && (
+                {formatDiscount(promotion.type, promotion.discountValue || promotion.value)}
+                {promotion.quantity > 0 && (
                   <div className="text-xs text-gray-500 mt-1">
-                    Min: {formatCurrency(promotion.minPurchase)}
-                  </div>
-                )}
-                {promotion.maxDiscount > 0 && promotion.type === "Percentage" && (
-                  <div className="text-xs text-gray-500">
-                    Max: {formatCurrency(promotion.maxDiscount)}
+                    Remaining: {promotion.quantity}
                   </div>
                 )}
               </td>
@@ -101,16 +114,16 @@ const TablePromotions = ({
               </td>
               <td className="px-4 py-4 text-center">
                 <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
-                  {promotion.applyTo}
+                  {promotion.type || "N/A"}
                 </span>
               </td>
               <td className="px-4 py-4 text-center">
-                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${promotionStatusColor[promotion.status]}`}>
-                  {promotion.status}
+                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${promotionStatusColor[promotion.status] || 'bg-gray-100 text-gray-800'}`}>
+                  {getDisplayStatus(promotion.status)}
                 </span>
               </td>
               <td className="px-4 py-4 text-center text-sm">
-                {promotion.usageCount}
+                {promotion.quantity || 0}
               </td>
               <td className="px-4 py-4 text-center">
                 <div className="flex items-center justify-center space-x-2">

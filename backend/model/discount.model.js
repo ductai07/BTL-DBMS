@@ -31,6 +31,7 @@ const Discount = sequelize.define('Discount', {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true
   },
+
   startDate: {
     type: DataTypes.DATEONLY,
     allowNull: true
@@ -38,7 +39,7 @@ const Discount = sequelize.define('Discount', {
   endDate: {
     type: DataTypes.DATEONLY,
     allowNull: true
-  }
+  },
 }, {
   tableName: 'Discount',
   timestamps: false

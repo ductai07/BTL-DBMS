@@ -15,7 +15,7 @@ const Showtime = () => {
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
-    pageSize: 5, // Display 20 showtimes per page
+    pageSize: 10,
     total: 0,
   });
 
@@ -43,11 +43,24 @@ const Showtime = () => {
     { key: "Đã chiếu", value: "Đã chiếu" },
   ];
 
-  // Fetch showtimes from the API
+  // Fetch showtimes from the API with improved error handling
   const fetchShowtimes = async () => {
     setLoading(true);
     try {
-      let url = `http://localhost:3000/showtime/simple?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
+      // Build URL with filters
+      let url = `http://localhost:3000/showtime?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
+      
+      if (movieFilter !== "all") {
+        url += `&movie_id=${movieFilter}`;
+      }
+      
+      if (cinemaFilter !== "all") {
+        url += `&cinema_id=${cinemaFilter}`;
+      }
+      
+      if (dateFilter !== "all") {
+        url += `&date=${dateFilter}`;
+      }
       
       console.log("Fetching showtimes from:", url);
       
@@ -60,63 +73,122 @@ const Showtime = () => {
       const data = await response.json();
       console.log("Showtime data received:", data);
       
-      // Use the data exactly as returned from the backend
-      setShowtimes(data.data || []);
-      setFilteredShowtimes(data.data || []);
+      if (!data || !Array.isArray(data.data)) {
+        console.error("Invalid showtime data format:", data);
+        throw new Error("Invalid data format received from server");
+      }
+      
+      // Use the data as received from the backend
+      setShowtimes(data.data);
+      setFilteredShowtimes(data.data);
       setPagination({
         currentPage: data.pagination?.currentPage || 1,
         totalPages: data.pagination?.totalPages || 1,
         pageSize: pagination.pageSize,
         total: data.pagination?.total || 0,
       });
+      
+      setError(null);
     } catch (err) {
       console.error("Error fetching showtimes:", err);
       setError("Không thể tải dữ liệu lịch chiếu. Vui lòng thử lại sau.");
+      
+      // Fallback to simple API if main API fails
+      try {
+        console.log("Attempting fallback to simple API...");
+        const simpleUrl = `http://localhost:3000/showtime/simple?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
+        const simpleResponse = await fetch(simpleUrl);
+        
+        if (!simpleResponse.ok) {
+          throw new Error(`HTTP error! status: ${simpleResponse.status}`);
+        }
+        
+        const simpleData = await simpleResponse.json();
+        console.log("Simple API data received:", simpleData);
+        
+        if (simpleData && Array.isArray(simpleData.data)) {
+          setShowtimes(simpleData.data);
+          setFilteredShowtimes(simpleData.data);
+          setPagination({
+            currentPage: simpleData.pagination?.currentPage || 1,
+            totalPages: simpleData.pagination?.totalPages || 1,
+            pageSize: pagination.pageSize,
+            total: simpleData.pagination?.total || 0,
+          });
+          
+          // Update error message to indicate we're using fallback data
+          setError("Sử dụng dữ liệu đơn giản do lỗi khi tải dữ liệu đầy đủ.");
+        } else {
+          throw new Error("Invalid data format from simple API");
+        }
+      } catch (fallbackErr) {
+        console.error("Fallback fetch also failed:", fallbackErr);
+        setShowtimes([]);
+        setFilteredShowtimes([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Load filter options
+  // Load filter options with improved error handling
   const loadFilterOptions = async () => {
     try {
       // Load movies
-      const moviesResponse = await fetch("http://localhost:3000/movie");
-      if (moviesResponse.ok) {
-        const moviesData = await moviesResponse.json();
-        setMovieOptions([
-          { key: "all", value: "Tất cả phim" },
-          ...(moviesData.data || []).map((movie) => ({
-            key: movie.id.toString(),
-            value: movie.title,
-          })),
-        ]);
+      try {
+        const moviesResponse = await fetch("http://localhost:3000/movie");
+        if (moviesResponse.ok) {
+          const moviesData = await moviesResponse.json();
+          if (moviesData && Array.isArray(moviesData.data)) {
+            setMovieOptions([
+              { key: "all", value: "Tất cả phim" },
+              ...(moviesData.data || []).map((movie) => ({
+                key: movie.id.toString(),
+                value: movie.title || `Phim #${movie.id}`,
+              })),
+            ]);
+          }
+        }
+      } catch (movieErr) {
+        console.error("Error loading movies:", movieErr);
       }
 
       // Load cinemas
-      const cinemasResponse = await fetch("http://localhost:3000/cinema");
-      if (cinemasResponse.ok) {
-        const cinemasData = await cinemasResponse.json();
-        setCinemaOptions([
-          { key: "all", value: "Tất cả rạp" },
-          ...(cinemasData.data || []).map((cinema) => ({
-            key: cinema.id.toString(),
-            value: cinema.name,
-          })),
-        ]);
+      try {
+        const cinemasResponse = await fetch("http://localhost:3000/cinema");
+        if (cinemasResponse.ok) {
+          const cinemasData = await cinemasResponse.json();
+          if (cinemasData && Array.isArray(cinemasData.data)) {
+            setCinemaOptions([
+              { key: "all", value: "Tất cả rạp" },
+              ...(cinemasData.data || []).map((cinema) => ({
+                key: cinema.id.toString(),
+                value: cinema.name || `Rạp #${cinema.id}`,
+              })),
+            ]);
+          }
+        }
+      } catch (cinemaErr) {
+        console.error("Error loading cinemas:", cinemaErr);
       }
 
       // Load showtime dates
-      const datesResponse = await fetch("http://localhost:3000/showtime/dates");
-      if (datesResponse.ok) {
-        const datesData = await datesResponse.json();
-        setDateOptions([
-          { key: "all", value: "Tất cả ngày" },
-          ...(datesData.data || []).map((date) => ({
-            key: date,
-            value: formatDate(date),
-          })),
-        ]);
+      try {
+        const datesResponse = await fetch("http://localhost:3000/showtime/dates");
+        if (datesResponse.ok) {
+          const datesData = await datesResponse.json();
+          if (datesData && Array.isArray(datesData.data)) {
+            setDateOptions([
+              { key: "all", value: "Tất cả ngày" },
+              ...(datesData.data || []).map((date) => ({
+                key: date,
+                value: formatDate(date),
+              })),
+            ]);
+          }
+        }
+      } catch (dateErr) {
+        console.error("Error loading dates:", dateErr);
       }
     } catch (err) {
       console.error("Error loading filter options:", err);
@@ -218,6 +290,24 @@ const Showtime = () => {
   const handleAddShowtime = async (showtimeData) => {
     try {
       setLoading(true);
+
+      // Validate form data
+      if (!showtimeData.movieId) {
+        throw new Error("Vui lòng chọn phim");
+      }
+      if (!showtimeData.roomId) {
+        throw new Error("Vui lòng chọn phòng chiếu");
+      }
+      if (!showtimeData.showDate) {
+        throw new Error("Vui lòng chọn ngày chiếu");
+      }
+      if (!showtimeData.startTime) {
+        throw new Error("Vui lòng chọn giờ bắt đầu");
+      }
+      if (!showtimeData.price) {
+        throw new Error("Vui lòng nhập giá vé");
+      }
+
       let response;
 
       if (showtimeData.id) {
@@ -266,6 +356,8 @@ const Showtime = () => {
 
       // Re-fetch showtimes
       fetchShowtimes();
+      // Reload filter options to include new date if added
+      loadFilterOptions();
       setIsModalOpen(false);
       alert(
         showtimeData.id
