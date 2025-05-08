@@ -206,20 +206,20 @@ const Movies = () => {
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
       <Header title={"Movie Management"} />
       <div>
-        <div className="flex justify-between mb-6 bg-white p-5 shadow-md rounded-xl">
-          <div>
-            <div className="flex gap-2 mb-3">
-              <div>
-                <div className="font-medium pb-4">Tên phim</div>
+        <div className="flex justify-between mb-6 bg-white p-6 shadow-md rounded-xl">
+          <div className="w-full">
+            <div className="flex flex-wrap gap-4 mb-4">
+              <div className="flex-grow max-w-md">
+                <div className="font-medium pb-2">Tìm kiếm phim</div>
                 <Search
-                  placeholder={"Nhập tên phim"}
+                  placeholder={"Nhập tên phim cần tìm..."}
                   setSearch={setSearch}
                   search={search}
                   queryRef={queryRef}
                 />
               </div>
               <div>
-                <div className="font-medium pb-4">Trạng thái</div>
+                <div className="font-medium pb-2">Thể loại</div>
                 <Select
                   options={Genres}
                   defaultValue={defaultGenres}
@@ -230,7 +230,7 @@ const Movies = () => {
                 />
               </div>
               <div>
-                <div className="font-medium pb-4">Thể loại</div>
+                <div className="font-medium pb-2">Trạng thái</div>
                 <Select
                   options={filmStatuses}
                   defaultValue={defaultFilmStatus}
@@ -242,35 +242,31 @@ const Movies = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <div
-                className="button !bg-white !text-black border border-black flex items-center justify-center hover:cursor-pointer"
+              <button
+                className="px-4 py-2 rounded-md border border-gray-500 text-gray-700 hover:bg-gray-100 transition-colors duration-200 flex items-center justify-center"
                 onClick={handleReset}
               >
-                Đặt lại
-              </div>
-              {/* <div
-                className="button flex items-center justify-center hover:cursor-pointer"
-                onClick={handleSearch}
-              >
-                Tìm kiếm
-              </div> */}
+                Đặt lại bộ lọc
+              </button>
             </div>
           </div>
-          <button
-            className="button flex items-center gap-1"
-            onClick={() => {
-              setIsModalOpen(true);
-              changeEntry(["Add new movie", "Add"]);
-            }}
-          >
-            <FaPlus />
-            Add movie
-          </button>
+          <div className="flex items-start">
+            <button
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 transition-colors duration-200 text-white rounded-md flex items-center gap-2"
+              onClick={() => {
+                setIsModalOpen(true);
+                changeEntry(["Add new movie", "Add"]);
+              }}
+            >
+              <FaPlus />
+              Thêm phim
+            </button>
+          </div>
         </div>
         {!data.length ? (
-          <p className="text-center font-semibold text-xl">
-            Không có bộ phim nào được tìm thấy!!!
-          </p>
+          <div className="bg-white p-8 rounded-lg text-center shadow-md">
+            <p className="text-gray-500">Không có bộ phim nào được tìm thấy.</p>
+          </div>
         ) : (
           <TableMovie
             columnNames={columnNames}

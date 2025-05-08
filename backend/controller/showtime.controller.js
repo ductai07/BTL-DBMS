@@ -5,7 +5,8 @@ const sequelize = require('../config/database'); // Thêm dòng này
 module.exports.index = async (req, res) => {
     try {
         // Lấy các tham số từ query
-        const { SearchKey, SearchValue, SortKey, SortValue, Page, Limit, movieId, cinemaId, roomId, startDate, endDate } = req.query;
+        const { SearchKey, SearchValue, SortKey, SortValue, Page, Limit, movie_id, cinema_id, date, status } = req.query;
+        console.log("Request parameters:", { SearchKey, SearchValue, SortKey, SortValue, Page, Limit, movie_id, cinema_id, date, status });
 
         // Khởi tạo các biến mặc định
         let where = {};
@@ -15,28 +16,34 @@ module.exports.index = async (req, res) => {
         let offset = (page - 1) * limit;
 
         // Lọc theo phim nếu có
-        if (movieId) {
-            where.movie_id = movieId;
+        if (movie_id) {
+            where.movie_id = movie_id;
         }
 
-        // Lọc theo phòng nếu có
-        if (roomId) {
-            where.room_id = roomId;
+        // Lọc theo ngày nếu có
+        if (date) {
+            where.showDate = date;
         }
 
-        // Lọc theo khoảng thời gian
-        if (startDate && endDate) {
-            where.showDate = {
-                [Op.between]: [startDate, endDate]
-            };
-        } else if (startDate) {
-            where.showDate = {
-                [Op.gte]: startDate
-            };
-        } else if (endDate) {
-            where.showDate = {
-                [Op.lte]: endDate
-            };
+        console.log("Initial where clause:", where);
+
+        // Thêm điều kiện lọc trạng thái nếu có
+        // Chỉ thêm nếu status field tồn tại trong database
+        if (status && status !== 'all') {
+            try {
+                // Kiểm tra schema trước khi thêm điều kiện
+                const showTimeModel = Model.ShowTime;
+                const attributes = Object.keys(showTimeModel.rawAttributes);
+                console.log("ShowTime attributes:", attributes);
+                
+                if (attributes.includes('status')) {
+                    where.status = status;
+                } else {
+                    console.log("Status field not found in model, skipping filter");
+                }
+            } catch (err) {
+                console.log("Error checking status field:", err.message);
+            }
         }
 
         // Xử lý tìm kiếm
@@ -49,6 +56,8 @@ module.exports.index = async (req, res) => {
             };
         }
 
+        console.log("Final where clause:", where);
+
         // Xử lý sắp xếp
         if (SortKey && SortValue) {
             order = [[SortKey, SortValue.toUpperCase()]];
@@ -59,6 +68,36 @@ module.exports.index = async (req, res) => {
             ]; // Sắp xếp mặc định
         }
 
+        console.log("Order clause:", order);
+
+        // Debug: log the ShowTime model structure
+        console.log("ShowTime model structure:");
+        const showTimeAttrs = Object.keys(Model.ShowTime.rawAttributes);
+        console.log("ShowTime attributes:", showTimeAttrs);
+        console.log("ShowTime associations:", Object.keys(Model.ShowTime.associations));
+
+        // Debug: log the Room model structure
+        console.log("Room model structure:");
+        const roomAttrs = Object.keys(Model.Room.rawAttributes);
+        console.log("Room attributes:", roomAttrs);
+        
+        // Kiểm tra các trường dữ liệu cho các model liên quan
+        // Phòng (Room)
+        let roomAttributes = ['id', 'name', 'type'];
+        try {
+            const RoomModel = Model.Room;
+            if (roomAttrs.includes('capacity')) {
+                roomAttributes.push('capacity');
+            }
+            if (roomAttrs.includes('seatCount')) {
+                roomAttributes.push('seatCount');
+            }
+        } catch (err) {
+            console.log("Error checking Room model attributes:", err.message);
+        }
+
+        console.log("Room attributes to include:", roomAttributes);
+
         // Khởi tạo các join conditions
         const includes = [
             {
@@ -67,7 +106,7 @@ module.exports.index = async (req, res) => {
             },
             {
                 model: Model.Room,
-                attributes: ['id', 'name', 'type', 'cinema_id'],
+                attributes: roomAttributes,
                 include: [
                     {
                         model: Model.Cinema,
@@ -78,28 +117,157 @@ module.exports.index = async (req, res) => {
         ];
 
         // Nếu có lọc theo rạp, thêm điều kiện vào join
-        if (cinemaId) {
-            includes[1].include[0].where = { id: cinemaId };
+        if (cinema_id) {
+            includes[1].include[0].where = { id: cinema_id };
             includes[1].include[0].required = true;
         }
 
-        // Thực hiện truy vấn
-        const { count, rows } = await Model.ShowTime.findAndCountAll({
-            where,
-            order,
-            limit,
-            offset,
-            include: includes,
-            distinct: true // Để count chính xác khi có include
+        console.log("Starting main query...");
+        
+        // Thực hiện truy vấn với try/catch chi tiết
+        let count = 0;
+        let rows = [];
+        
+        try {
+            // Thực hiện truy vấn
+            const result = await Model.ShowTime.findAndCountAll({
+                where,
+                order,
+                limit,
+                offset,
+                include: includes,
+                distinct: true // Để count chính xác khi có include
+            });
+            
+            count = result.count;
+            rows = result.rows;
+            
+            console.log(`Query successful. Found ${count} showtimes.`);
+        } catch (queryError) {
+            console.error("Error in main showtime query:", queryError);
+            console.error("Error details:", queryError.message);
+            if (queryError.original) {
+                console.error("Original error:", queryError.original.message);
+                console.error("SQL state:", queryError.original.state);
+            }
+            if (queryError.sql) {
+                console.error("Generated SQL:", queryError.sql);
+            }
+            if (queryError.parameters) {
+                console.error("Query parameters:", queryError.parameters);
+            }
+            
+            // Fallback to simpler query if the complex one fails
+            console.log("Attempting simpler query without joins...");
+            try {
+                const simpleResult = await Model.ShowTime.findAndCountAll({
+                    where,
+                    order,
+                    limit,
+                    offset
+                });
+                
+                count = simpleResult.count;
+                rows = simpleResult.rows;
+                
+                console.log(`Simple query successful. Found ${count} showtimes.`);
+            } catch (simpleQueryError) {
+                console.error("Even simple query failed:", simpleQueryError.message);
+                throw simpleQueryError; // Re-throw to be caught by outer catch
+            }
+        }
+
+        console.log("Query completed, processing results...");
+
+        // Đếm số vé đã bán cho mỗi lịch chiếu
+        const showtimeIds = rows.map(showtime => showtime.id);
+        let soldTicketCounts = {};
+        
+        if (showtimeIds.length > 0) {
+            try {
+                const ticketCounts = await Model.Ticket.findAll({
+                    attributes: [
+                        'showtime_id',
+                        [sequelize.fn('COUNT', sequelize.col('id')), 'ticketCount']
+                    ],
+                    where: { showtime_id: { [Op.in]: showtimeIds } },
+                    group: ['showtime_id'],
+                    raw: true
+                });
+                
+                // Chuyển đổi kết quả thành object để dễ truy cập
+                ticketCounts.forEach(item => {
+                    soldTicketCounts[item.showtime_id] = parseInt(item.ticketCount);
+                });
+                
+                console.log("Ticket counts retrieved successfully");
+            } catch (err) {
+                console.log("Error counting tickets:", err.message);
+                // Continue without ticket counts rather than failing completely
+            }
+        }
+
+        // Định dạng lại dữ liệu cho frontend
+        const formattedShowtimes = rows.map(showtime => {
+            const plain = showtime.get({ plain: true });
+            
+            // Xác định trạng thái dựa trên ngày nếu không có trường status
+            let status = "Unknown";
+            try {
+                if (plain.status) {
+                    status = plain.status;
+                } else {
+                    // Tính toán trạng thái dựa trên ngày
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    const showtimeDate = new Date(plain.showDate);
+                    
+                    if (showtimeDate < today) {
+                        status = "Đã chiếu";
+                    } else if (showtimeDate > today) {
+                        status = "Sắp chiếu";
+                    } else {
+                        status = "Đang chiếu";
+                    }
+                }
+            } catch (err) {
+                console.log("Error calculating status:", err.message);
+            }
+            
+            // Xác định capacity từ room
+            let roomCapacity = 0;
+            if (plain.Room) {
+                roomCapacity = plain.Room.capacity || plain.Room.seatCount || 0;
+            }
+            
+            return {
+                id: plain.id,
+                title: plain.Movie?.title || "Unknown",
+                cinema: plain.Room?.Cinema?.name || "Unknown",
+                room: plain.Room?.name || "Unknown",
+                date: plain.showDate,
+                time: plain.startTime?.substring(0, 5) || "",
+                status: status,
+                tickets: {
+                    sold: soldTicketCounts[plain.id] || 0,
+                    total: roomCapacity
+                },
+                price: plain.price,
+                // Thêm dữ liệu gốc để chi tiết
+                originalData: plain
+            };
         });
+
+        console.log(`Formatted ${formattedShowtimes.length} showtimes for response`);
 
         // Tính toán thông tin phân trang
         const totalPages = Math.ceil(count / limit);
         const hasNext = page < totalPages;
         const hasPrevious = page > 1;
 
-        res.status(200).json({
-            data: rows,
+        const response = {
+            data: formattedShowtimes,
             pagination: {
                 total: count,
                 totalPages,
@@ -108,11 +276,30 @@ module.exports.index = async (req, res) => {
                 hasNext,
                 hasPrevious
             }
+        };
+
+        console.log("Sending response:", { 
+            total: count, 
+            totalPages, 
+            currentPage: page,
+            resultCount: formattedShowtimes.length 
         });
+
+        res.status(200).json(response);
     } catch (error) {
+        console.error("ShowTime index error:", error);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        
+        if (error.original) {
+            console.error("Original error:", error.original.message);
+            console.error("SQL state:", error.original.state);
+        }
+
         res.status(500).json({
             message: 'Error retrieving showtimes',
-            error: error.message
+            error: error.message,
+            details: error.original ? error.original.message : 'No additional details'
         });
     }
 };
@@ -573,20 +760,34 @@ module.exports.getInfo = async (req, res) => {
 // Lấy danh sách các ngày chiếu
 module.exports.getDates = async (req, res) => {
     try {
-        // Truy vấn tất cả các ngày chiếu duy nhất
-        const dates = await sequelize.query(
-            `SELECT DISTINCT showDate 
-             FROM ShowTime 
-             WHERE showDate >= CURDATE() 
-             ORDER BY showDate ASC`,
-            {
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
+        const { futureOnly } = req.query;
+        
+        // Build the query to get unique dates
+        let query = `SELECT DISTINCT showDate FROM ShowTime`;
+        
+        // If futureOnly is true, get only future dates
+        if (futureOnly === 'true') {
+            query += ` WHERE showDate >= CONVERT(date, GETDATE())`;
+        }
+        
+        // Order dates
+        query += ` ORDER BY showDate ASC`;
+        
+        // Execute the query
+        const dates = await sequelize.query(query, {
+            type: sequelize.QueryTypes.SELECT
+        });
+        
+        // Format dates for display if needed
+        const formattedDates = dates.map(item => {
+            const date = item.showDate;
+            // Keep the original format for easy filtering
+            return date;
+        });
         
         res.status(200).json({
             success: true,
-            data: dates.map(item => item.showDate)
+            data: formattedDates
         });
     } catch (error) {
         res.status(500).json({

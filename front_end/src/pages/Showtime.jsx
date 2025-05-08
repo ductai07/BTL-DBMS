@@ -41,24 +41,9 @@ const Showtime = () => {
   const fetchShowtimes = async () => {
     setLoading(true);
     try {
-      let url = `http://localhost:3000/showtime?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
+      let url = `http://localhost:3000/showtime/simple?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
       
-      // Add filters if not "all"
-      if (movieFilter !== "all") {
-        url += `&movie_id=${movieFilter}`;
-      }
-      
-      if (cinemaFilter !== "all") {
-        url += `&cinema_id=${cinemaFilter}`;
-      }
-      
-      if (dateFilter !== "all") {
-        url += `&date=${dateFilter}`;
-      }
-      
-      if (statusFilter !== "all") {
-        url += `&status=${statusFilter}`;
-      }
+      console.log("Fetching showtimes from:", url);
       
       const response = await fetch(url);
       
@@ -67,26 +52,11 @@ const Showtime = () => {
       }
       
       const data = await response.json();
+      console.log("Showtime data received:", data);
       
-      // Transform data for the component
-      const formattedShowtimes = (data.data || []).map(showtime => ({
-        id: showtime.id,
-        title: showtime.Movie?.title || "Unknown",
-        cinema: showtime.Room?.Cinema?.name || "Unknown",
-        room: showtime.Room?.name || "Unknown",
-        date: showtime.showDate,
-        time: showtime.startTime?.substring(0, 5) || "",
-        status: showtime.status || "Unknown",
-        tickets: {
-          sold: showtime.soldTickets || 0,
-          total: showtime.Room?.capacity || 0
-        },
-        // Keep original data for reference
-        originalData: showtime
-      }));
-      
-      setShowtimes(formattedShowtimes);
-      setFilteredShowtimes(formattedShowtimes);
+      // Use the data exactly as returned from the backend
+      setShowtimes(data.data || []);
+      setFilteredShowtimes(data.data || []);
       setPagination({
         currentPage: data.pagination?.currentPage || 1,
         totalPages: data.pagination?.totalPages || 1,
@@ -423,7 +393,7 @@ const Showtime = () => {
                     if (pagination.totalPages > 0) {
                       pages.push(
                         <button
-                          key={1}
+                          key="page-1"
                           onClick={() => handlePageChange(1)}
                           className={`w-8 h-8 flex items-center justify-center rounded ${
                             pagination.currentPage === 1
@@ -438,7 +408,7 @@ const Showtime = () => {
                     
                     // Add ellipsis if needed
                     if (pagination.currentPage > 3) {
-                      pages.push(<span key="ellipsis1">...</span>);
+                      pages.push(<span key="ellipsis-1">...</span>);
                     }
                     
                     // Add pages around current page
@@ -446,7 +416,7 @@ const Showtime = () => {
                       if (i > 1 && i < pagination.totalPages) {
                         pages.push(
                           <button
-                            key={i}
+                            key={`page-${i}`}
                             onClick={() => handlePageChange(i)}
                             className={`w-8 h-8 flex items-center justify-center rounded ${
                               pagination.currentPage === i
@@ -462,14 +432,14 @@ const Showtime = () => {
                     
                     // Add ellipsis if needed
                     if (pagination.currentPage < pagination.totalPages - 2) {
-                      pages.push(<span key="ellipsis2">...</span>);
+                      pages.push(<span key="ellipsis-2">...</span>);
                     }
                     
                     // Always show last page if there are multiple pages
                     if (pagination.totalPages > 1) {
                       pages.push(
                         <button
-                          key={pagination.totalPages}
+                          key={`page-${pagination.totalPages}`}
                           onClick={() => handlePageChange(pagination.totalPages)}
                           className={`w-8 h-8 flex items-center justify-center rounded ${
                             pagination.currentPage === pagination.totalPages
@@ -501,13 +471,13 @@ const Showtime = () => {
       
       {/* Showtime Modal */}
       <AddShowTimeModal
-        title={entry.current.title}
+        title={entry.current?.title || "Add new showtime"}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAddShowtime={handleAddShowtime}
         info={infoShowTime}
         setInfo={setInfoShowTime}
-        Entry={entry.current.action}
+        Entry={entry.current?.action || "Add"}
       />
     </div>
   );

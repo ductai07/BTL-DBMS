@@ -1,11 +1,139 @@
 import { useState, useEffect } from "react";
 import Header from "../component/Header";
 import Select from "../component/Select";
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaEye, FaBan, FaReceipt, FaTrash } from "react-icons/fa";
 import TableTickets from "../component/TableTickets";
 import AddTicketModal from "../component/AddTicketModal";
 import Search from "../component/Search";
 import { formatCurrency } from "../utils/formatUtils";
+
+// Ticket Details Modal Component
+const TicketDetailsModal = ({ isOpen, onClose, ticket, formatDate, formatCurrency }) => {
+  if (!isOpen || !ticket) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl overflow-hidden">
+        <div className="flex justify-between items-center border-b px-6 py-4">
+          <h3 className="text-xl font-semibold text-gray-900">Chi tiết vé #{ticket.id}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="p-6 overflow-y-auto max-h-[70vh]">
+          {/* Ticket Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium text-lg mb-4 text-gray-700">Thông tin vé</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Mã vé:</span>
+                  <span className="font-medium">{ticket.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Ngày đặt:</span>
+                  <span>{formatDate(ticket.bookingDate)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Giá vé:</span>
+                  <span>{formatCurrency(ticket.price)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Trạng thái:</span>
+                  <span className={`font-medium ${
+                    ticket.status === 'canceled' ? 'text-red-600' : 
+                    ticket.status === 'used' ? 'text-green-600' : 'text-yellow-600'
+                  }`}>
+                    {ticket.status === 'canceled' ? 'Đã hủy' : 
+                     ticket.status === 'used' ? 'Đã sử dụng' : 'Chưa sử dụng'}
+                  </span>
+                </div>
+                {ticket.qrCode && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Mã QR:</span>
+                    <span className="font-mono text-sm">{ticket.qrCode}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-medium text-lg mb-4 text-gray-700">Thông tin phim</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Phim:</span>
+                  <span>{ticket.movieTitle || "Không có thông tin"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Rạp:</span>
+                  <span>{ticket.cinemaName || "Không có thông tin"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Phòng:</span>
+                  <span>{ticket.roomName || "Không có thông tin"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Ghế:</span>
+                  <span className="font-medium">{ticket.seatPosition || "Không có thông tin"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Ngày chiếu:</span>
+                  <span>{formatDate(ticket.showDate) || "Không có thông tin"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Giờ chiếu:</span>
+                  <span>{ticket.showTime || "Không có thông tin"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-6">
+            <h4 className="font-medium text-lg mb-4 text-gray-700">Thông tin hóa đơn</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Mã hóa đơn:</span>
+                <span>{ticket.invoice_id || "Chưa gắn với hóa đơn"}</span>
+              </div>
+              {ticket.originalData?.Invoice && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Trạng thái hóa đơn:</span>
+                    <span className={`font-medium ${
+                      ticket.originalData.Invoice.status === 'paid' ? 'text-green-600' : 
+                      ticket.originalData.Invoice.status === 'canceled' ? 'text-red-600' : 'text-yellow-600'
+                    }`}>
+                      {ticket.originalData.Invoice.status === 'paid' ? 'Đã thanh toán' : 
+                       ticket.originalData.Invoice.status === 'canceled' ? 'Đã hủy' : 'Chưa thanh toán'}
+                    </span>
+                  </div>
+                  {ticket.originalData.Invoice.Customer && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Khách hàng:</span>
+                      <span>{ticket.originalData.Invoice.Customer.fullName}</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="border-t px-6 py-4 flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Tickets = () => {
   const [tickets, setTickets] = useState([]);
@@ -37,15 +165,28 @@ const Tickets = () => {
     { key: "canceled", value: "Đã hủy" }
   ];
 
+  // State for ticket details modal
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  // Function to handle entry mode changes (for edit/add modals)
+  const [entryMode, setEntryMode] = useState(["Thêm vé", "Lưu"]);
+  
+  // Change entry mode function (used when opening modal in different modes)
+  const changeEntry = (newMode) => {
+    setEntryMode(newMode);
+  };
+
   // Fetch tickets from the API
   const fetchTickets = async () => {
     setLoading(true);
     try {
+      // Use the main ticket endpoint instead of the simple one for more comprehensive data
       let url = `http://localhost:3000/ticket?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
       
       // Add filters if not "all"
       if (movieFilter !== "all") {
-        url += `&movie_id=${movieFilter}`;
+        url += `&movieId=${movieFilter}`;
       }
       
       if (dateFilter !== "all") {
@@ -60,6 +201,8 @@ const Tickets = () => {
         url += `&SearchKey=customerName&SearchValue=${encodeURIComponent(searchTerm)}`;
       }
       
+      console.log("Fetching tickets from:", url);
+      
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -67,28 +210,37 @@ const Tickets = () => {
       }
       
       const data = await response.json();
+      console.log("Ticket data received:", data);
       
-      // Transform data for the table component
+      // Transform data for the table component with more useful information
       const formattedTickets = (data.data || []).map(ticket => ({
         id: ticket.id,
-        customer: ticket.Customer ? ticket.Customer.name : "Walk-in",
-        movie: ticket.Showtime?.Movie?.title || "Unknown",
-        date: formatDate(ticket.Showtime?.showDate),
-        time: ticket.Showtime?.startTime?.substring(0, 5) || "",
-        room: ticket.Showtime?.Room?.name || "Unknown",
-        seat: ticket.Seat?.position || "Unknown",
+        bookingDate: ticket.bookingDate,
         price: ticket.price,
-        status: ticket.status || "Unknown",
+        qrCode: ticket.qrCode,
+        showtime_id: ticket.showtimeId || ticket.showtime_id,
+        seat_id: ticket.seatId || ticket.seat_id,
+        invoice_id: ticket.invoiceId || ticket.invoice_id,
+        status: ticket.status,
+        // Additional info for display if available
+        movieTitle: ticket.movieTitle || "Unknown",
+        cinemaName: ticket.cinemaName || "Unknown",
+        roomName: ticket.roomName || "Unknown",
+        seatPosition: ticket.seatNumber || "Unknown",
+        showDate: ticket.showDate,
+        showTime: ticket.showTime,
         // Keep original data for reference
         originalData: ticket
       }));
+      
+      console.log("Formatted tickets:", formattedTickets);
       
       setTickets(formattedTickets);
       setFilteredTickets(formattedTickets);
       setPagination({
         currentPage: data.pagination?.currentPage || 1,
         totalPages: data.pagination?.totalPages || 1,
-        pageSize: data.pagination?.pageSize || 20,
+        pageSize: pagination.pageSize,
         total: data.pagination?.total || 0
       });
       setError(null);
@@ -279,6 +431,136 @@ const Tickets = () => {
     }
   };
 
+  // Fetch ticket details
+  const fetchTicketDetails = async (ticketId) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:3000/ticket/detail/${ticketId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Return formatted ticket data for the modal
+      const ticket = data.data;
+      return {
+        id: ticket.id,
+        bookingDate: ticket.bookingDate,
+        price: ticket.price,
+        qrCode: ticket.qrCode,
+        showtime_id: ticket.showtime_id,
+        seat_id: ticket.seat_id,
+        invoice_id: ticket.invoice_id,
+        status: ticket.status || 'unused',
+        movieTitle: ticket.ShowTime?.Movie?.title,
+        cinemaName: ticket.ShowTime?.Room?.Cinema?.name,
+        roomName: ticket.ShowTime?.Room?.name,
+        seatPosition: ticket.Seat?.position,
+        showDate: ticket.ShowTime?.showDate,
+        showTime: ticket.ShowTime?.startTime,
+        originalData: ticket
+      };
+    } catch (err) {
+      console.error("Error fetching ticket details:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle viewing ticket details
+  const handleViewTicketDetails = async (ticketId) => {
+    try {
+      const ticketDetails = await fetchTicketDetails(ticketId);
+      setSelectedTicket(ticketDetails);
+      setIsDetailsModalOpen(true);
+    } catch (err) {
+      alert("Không thể tải thông tin chi tiết vé. Vui lòng thử lại sau.");
+    }
+  };
+
+  // Handle ticket cancellation
+  const handleCancelTicket = async (ticketId) => {
+    if (window.confirm("Bạn có chắc chắn muốn hủy vé này không?")) {
+      try {
+        setLoading(true);
+        const response = await fetch(`http://localhost:3000/ticket/cancel/${ticketId}`, {
+          method: 'PATCH',
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        
+        // Re-fetch tickets
+        fetchTickets();
+        alert("Hủy vé thành công!");
+      } catch (err) {
+        console.error("Error cancelling ticket:", err);
+        alert(`Không thể hủy vé: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Handle ticket assignment to invoice
+  const handleAssignTicketToInvoice = async (ticketId, invoiceId) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:3000/invoice/${invoiceId}/ticket`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ticketId })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      // Re-fetch tickets
+      fetchTickets();
+      alert("Đã thêm vé vào hóa đơn thành công!");
+    } catch (err) {
+      console.error("Error assigning ticket to invoice:", err);
+      alert(`Không thể thêm vé vào hóa đơn: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle removing ticket from invoice
+  const handleRemoveTicketFromInvoice = async (invoiceId, ticketId) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa vé này khỏi hóa đơn không?")) {
+      try {
+        setLoading(true);
+        const response = await fetch(`http://localhost:3000/invoice/${invoiceId}/ticket/${ticketId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        
+        // Re-fetch tickets
+        fetchTickets();
+        alert("Đã xóa vé khỏi hóa đơn thành công!");
+      } catch (err) {
+        console.error("Error removing ticket from invoice:", err);
+        alert(`Không thể xóa vé khỏi hóa đơn: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   // Reset all filters
   const handleResetFilters = () => {
     setSearchTerm("");
@@ -354,13 +636,16 @@ const Tickets = () => {
       ) : (
         <>
           <TableTickets
-            columnNames={["ID", "Phim", "Rạp", "Phòng", "Ghế", "Ngày", "Giờ", "Giá", "Trạng thái", "Thao tác"]}
             tickets={filteredTickets}
             setOpen={setIsModalOpen}
-            setInfoTicket={() => {}} // Add proper implementation if needed
-            changeEntry={() => {}} // Add proper implementation if needed
+            setInfoTicket={setSelectedTicket}
+            changeEntry={changeEntry}
             handleDelete={handleDeleteTicket}
             formatCurrency={formatCurrency}
+            onViewDetails={handleViewTicketDetails}
+            onCancelTicket={handleCancelTicket}
+            onAssignToInvoice={handleAssignTicketToInvoice}
+            onRemoveFromInvoice={handleRemoveTicketFromInvoice}
           />
           
           {/* Pagination */}
@@ -425,6 +710,15 @@ const Tickets = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAddTicket={handleAddTicket}
+      />
+
+      {/* Ticket Details Modal */}
+      <TicketDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        ticket={selectedTicket}
+        formatDate={formatDate}
+        formatCurrency={formatCurrency}
       />
     </div>
   );

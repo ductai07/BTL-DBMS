@@ -60,7 +60,7 @@ const TopRevenue = () => {
       </div>
       <div>
         {topMovies.map((movie, idx) => (
-          <div className="flex justify-between items-center border-b pb-3 pt-3">
+          <div key={`movie-${idx}`} className="flex justify-between items-center border-b pb-3 pt-3">
             <div className="flex gap-6 items-center">
               <span
                 className={

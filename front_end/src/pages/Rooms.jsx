@@ -12,24 +12,66 @@ const Rooms = () => {
   const [rooms, setRooms] = useState([]);
   const [pagination, setPagination] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [cinemaOptions, setCinemaOptions] = useState([
+    { key: "", value: "Tất cả" }
+  ]);
   const queryRef = useRef({
     SearchKey: "",
     SearchValue: "",
     SortKey: "",
     SortValue: "",
     Page: "",
-    Limit: "",
+    Limit: 10,
     cinemaId: "",
+    type: "",
   });
+  
+  // Fetch cinema options
   useEffect(() => {
-    const Fetch = async () => {
-      const response = await fetch("http://localhost:3000/room");
-      const data = await response.json();
-      setRooms(data.data);
-      console.log(data.data);
-      setPagination(data.pagination);
+    const fetchCinemas = async () => {
+      try {
+        const response = await fetch("http://localhost:3000/cinema");
+        if (!response.ok) {
+          throw new Error("Failed to fetch cinemas");
+        }
+        const data = await response.json();
+        
+        // Format data for dropdown
+        const options = [
+          { key: "", value: "Tất cả" },
+          ...(data.data || []).map(cinema => ({
+            key: cinema.id,
+            value: cinema.name
+          }))
+        ];
+        
+        setCinemaOptions(options);
+      } catch (error) {
+        console.error("Error fetching cinemas:", error);
+      }
     };
-    Fetch();
+    
+    fetchCinemas();
+  }, []);
+  
+  // Fetch initial room data
+  useEffect(() => {
+    const fetchRooms = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch("http://localhost:3000/room");
+        const data = await response.json();
+        setRooms(data.data);
+        setPagination(data.pagination);
+      } catch (error) {
+        console.error("Error fetching rooms:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchRooms();
   }, []);
 
   // call api de update data
@@ -117,13 +159,6 @@ const Rooms = () => {
   };
 
   // Khong lien quan
-  const Cinemas = [
-    { key: "", value: "Tất cả" },
-    { key: 1, value: "Galaxy Nguyễn Du" },
-    { key: 3, value: "BHD Star Vincom Thảo Điền" },
-    { key: 2, value: "CGV Crescent Mall" },
-  ];
-
   const roomsTypes = [
     { key: "all", value: "All Room Types" },
     { key: "standard", value: "Standard" },
@@ -145,7 +180,7 @@ const Rooms = () => {
   ];
 
   const [defaultCinemas, setDefaultCinemas] = useState(
-    () => localStorage.getItem("keyCinemas") || Cinemas[0].value
+    () => localStorage.getItem("keyCinemas") || cinemaOptions[0].value
   );
   const [defaultRoomTypes, setDefaultRoomTypes] = useState(
     () => localStorage.getItem("keyRoomTypes") || roomsTypes[0].value
@@ -178,36 +213,64 @@ const Rooms = () => {
   const [search, setSearch] = useState("");
   // name, type, seatCount, status, cinema_id
   const handleSearch = async () => {
-    queryRef.current.Page = currentPage;
-    const queryString = new URLSearchParams(queryRef.current).toString();
-    const response = await fetch(`http://localhost:3000/room?${queryString}`);
-    const data = await response.json();
-    setRooms(data.data);
-    setPagination(data.pagination);
+    setIsLoading(true);
+    try {
+      queryRef.current.Page = currentPage;
+      const queryString = new URLSearchParams(queryRef.current).toString();
+      console.log("Searching with query:", queryString);
+      const response = await fetch(`http://localhost:3000/room?${queryString}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setRooms(data.data);
+      setPagination(data.pagination);
+    } catch (error) {
+      console.error("Error searching rooms:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
   useEffect(() => {
-    console.log("dc", queryRef.current.SearchKey);
-    console.log("dc", queryRef.current.SearchValue);
     handleSearch();
   }, [currentPage, search, defaultCinemas, defaultRoomTypes]);
+
   const handleReset = () => {
+    // Reset all search parameters
+    queryRef.current = {
+      SearchKey: "",
+      SearchValue: "",
+      SortKey: "",
+      SortValue: "",
+      Page: 1,
+      Limit: 10,
+      cinemaId: "",
+      type: ""
+    };
+    
     setSearch("");
-    setDefaultCinemas(Cinemas[0].value);
+    setDefaultCinemas(cinemaOptions[0].value);
     setDefaultRoomTypes(roomsTypes[0].value);
     setCurrentPage(1);
+    
+    // Trigger a new search with reset parameters
+    handleSearch();
   };
 
   return (
     <div className="w-[100%] h-[100vh]  bg-neutral-100  p-5 overflow-auto">
       <Header title={"Cinema Management"} />
       <div>
-        <div className="flex justify-between mb-6  bg-white p-5 shadow-md rounded-xl">
-          <div>
-            <div className="flex gap-2 mb-4">
-              <div>
-                <div className="font-medium pb-4">Mã phòng</div>
+        <div className="flex justify-between mb-6 bg-white p-6 shadow-md rounded-xl">
+          <div className="w-full">
+            <div className="flex flex-wrap gap-4 mb-4">
+              <div className="flex-grow max-w-md">
+                <div className="font-medium pb-2">Tìm kiếm phòng</div>
                 <Search
-                  placeholder={"Nhập tên phòng"}
+                  placeholder={"Nhập tên phòng cần tìm..."}
                   setSearch={setSearch}
                   search={search}
                   keySearch={"name"}
@@ -215,9 +278,9 @@ const Rooms = () => {
                 />
               </div>
               <div>
-                <div className="font-medium pb-4">Rạp</div>
+                <div className="font-medium pb-2">Rạp chiếu phim</div>
                 <Select
-                  options={Cinemas}
+                  options={cinemaOptions}
                   defaultValue={defaultCinemas}
                   setDefault={setDefaultCinemas}
                   keyStorage={"keyCinemas"}
@@ -226,7 +289,7 @@ const Rooms = () => {
                 />
               </div>
               <div>
-                <div className="font-medium pb-4">Loại phòng</div>
+                <div className="font-medium pb-2">Loại phòng</div>
                 <Select
                   options={roomsTypes}
                   defaultValue={defaultRoomTypes}
@@ -238,44 +301,55 @@ const Rooms = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <div
-                className="button !bg-white !text-black border border-black flex items-center justify-center hover:cursor-pointer"
+              <button
+                className="px-4 py-2 rounded-md border border-gray-500 text-gray-700 hover:bg-gray-100 transition-colors duration-200 flex items-center justify-center"
                 onClick={handleReset}
               >
-                Đặt lại
-              </div>
-              {/* <div
-                className="button flex items-center justify-center hover:cursor-pointer"
-                onClick={handleSearch}
-              >
-                Tìm kiếm
-              </div> */}
+                Đặt lại bộ lọc
+              </button>
             </div>
           </div>
-
-          <button
-            className="button flex items-center gap-1"
-            onClick={() => {
-              setIsModalOpen(true);
-              changeEntry(["Add room", "Add"]);
-            }}
-          >
-            <FaPlus />
-            Add Room
-          </button>
+          <div className="flex items-start">
+            <button
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 transition-colors duration-200 text-white rounded-md flex items-center gap-2"
+              onClick={() => {
+                setIsModalOpen(true);
+                changeEntry(["Thêm phòng mới", "Add"]);
+              }}
+            >
+              <FaPlus />
+              Thêm phòng
+            </button>
+          </div>
         </div>
         <div>
-          <TableRooms
-            columnNames={columnNames}
-            rooms={rooms}
-            setOpen={setIsModalOpen}
-            setInfoRoom={setInfoRoom}
-            changeEntry={changeEntry}
-            handleDelete={handleDelete}
-            setCurrentPage={setCurrentPage}
-            currentPage={currentPage}
-            totalPages={pagination?.totalPages}
-          />
+          {isLoading ? (
+            <div className="bg-white p-8 rounded-lg shadow-md flex items-center justify-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+            </div>
+          ) : rooms.length === 0 ? (
+            <div className="bg-white p-8 rounded-lg text-center shadow-md">
+              <p className="text-gray-500">Không tìm thấy phòng nào phù hợp với tìm kiếm.</p>
+              <button 
+                onClick={handleReset} 
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Xem tất cả phòng
+              </button>
+            </div>
+          ) : (
+            <TableRooms
+              columnNames={columnNames}
+              rooms={rooms}
+              setOpen={setIsModalOpen}
+              setInfoRoom={setInfoRoom}
+              changeEntry={changeEntry}
+              handleDelete={handleDelete}
+              setCurrentPage={setCurrentPage}
+              currentPage={currentPage}
+              totalPages={pagination?.totalPages}
+            />
+          )}
         </div>
       </div>
       <AddRoom
