@@ -24,22 +24,17 @@ const Orders = () => {
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
-    pageSize: 5, // Set limit to 5
-    total: 0
+    pageSize: 5,
+    total: 0,
   });
 
   const queryRef = useRef({});
-
-  const handleStatusChange = (status) => {
-    setStatusFilter(status);
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
-    setTimeout(() => fetchOrders(), 0);
-  };
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
       let url = `${API_ENDPOINTS.ORDERS}?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
+
       if (queryRef.current.status && queryRef.current.status !== "all") {
         url += `&status=${encodeURIComponent(queryRef.current.status)}`;
       }
@@ -49,8 +44,8 @@ const Orders = () => {
 
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
       const data = await response.json();
+
       const formattedOrders = (data.data || []).map(invoice => ({
         id: invoice.id,
         date: formatDate(invoice.createDate),
@@ -63,12 +58,15 @@ const Orders = () => {
 
       setOrders(formattedOrders);
       setFilteredOrders(formattedOrders);
-      setPagination({
-        currentPage: data.pagination?.currentPage || 1,
-        totalPages: data.pagination?.totalPages || 1,
-        pageSize: data.pagination?.pageSize || 10,
-        total: data.pagination?.total || 0
-      });
+
+      const pageData = data.pagination || {};
+      setPagination(prev => ({
+        ...prev,
+        currentPage: pageData.currentPage || 1,
+        totalPages: pageData.totalPages || 1,
+        pageSize: pageData.pageSize || prev.pageSize,
+        total: pageData.total || 0
+      }));
       setError(null);
     } catch (err) {
       setError("Không thể tải dữ liệu đơn hàng. Vui lòng thử lại sau.");
@@ -80,8 +78,21 @@ const Orders = () => {
   };
 
   useEffect(() => {
+    queryRef.current.status = statusFilter;
+    if (searchTerm) {
+      queryRef.current.SearchKey = "$Customer.fullName$";
+      queryRef.current.SearchValue = searchTerm;
+    } else {
+      delete queryRef.current.SearchKey;
+      delete queryRef.current.SearchValue;
+    }
     fetchOrders();
-  }, [pagination.currentPage, searchTerm]);
+  }, [pagination.currentPage, statusFilter, searchTerm]);
+
+  const handleStatusChange = (status) => {
+    setStatusFilter(status);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -91,7 +102,7 @@ const Orders = () => {
   };
 
   const formatCustomer = (customer, customerId, note) => {
-    if (customer && customer.fullName) {
+    if (customer?.fullName) {
       return `${customer.fullName}${customer.phoneNumber ? ` (${customer.phoneNumber})` : ''}`;
     } else if (customerId) {
       return `Khách hàng #${customerId}`;
@@ -102,52 +113,43 @@ const Orders = () => {
     }
   };
 
-  const fetchOrderDetails = async (orderId) => {
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({ ...prev, currentPage: newPage }));
+  };
+
+  const handleOpenOrderDetails = async (orderId) => {
+    setSelectedOrderId(orderId);
     setLoading(true);
     try {
       const response = await fetch(`http://localhost:3000/invoice/detail/${orderId}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       setOrderDetails(data.data);
-    } catch (err) {
-      alert("Không thể tải chi tiết đơn hàng. Vui lòng thử lại sau.");
-      setOrderDetails(null);
+      setIsDetailsModalOpen(true);
+    } catch {
+      alert("Không thể tải chi tiết đơn hàng.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenOrderDetails = async (orderId) => {
-    setSelectedOrderId(orderId);
-    await fetchOrderDetails(orderId);
-    setIsDetailsModalOpen(true);
-  };
-
   const handleCreateOrder = async () => {
-    try {
-      await fetchOrders();
-      alert("Đơn hàng đã được tạo thành công!");
-    } catch (err) {
-      console.error("Error after creating order:", err);
-    }
+    await fetchOrders();
+    alert("Đơn hàng đã được tạo thành công!");
   };
 
   const handleDeleteOrder = async (orderId) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa đơn hàng này không?")) {
-      try {
-        setLoading(true);
-        const response = await fetch(`http://localhost:3000/invoice/delete/${orderId}`, { method: 'DELETE' });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
-        await fetchOrders();
-        alert("Xóa đơn hàng thành công!");
-      } catch (err) {
-        alert(`Không thể xóa đơn hàng: ${err.message}`);
-      } finally {
-        setLoading(false);
-      }
+    if (!window.confirm("Bạn có chắc chắn muốn xóa đơn hàng này không?")) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:3000/invoice/delete/${orderId}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error((await response.json()).message);
+      await fetchOrders();
+      alert("Xóa đơn hàng thành công!");
+    } catch (err) {
+      alert(`Không thể xóa đơn hàng: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -161,26 +163,17 @@ const Orders = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ paymentMethod: 'Cash' })
         });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error((await response.json()).message);
+        await fetchOrders();
+        alert("Cập nhật trạng thái đơn hàng thành công!");
       } else {
         throw new Error("Chỉ hỗ trợ chuyển trạng thái sang 'Đã thanh toán'");
       }
-      await fetchOrders();
-      alert("Cập nhật trạng thái đơn hàng thành công!");
     } catch (err) {
-      alert(`Không thể cập nhật trạng thái đơn hàng: ${err.message}`);
+      alert(`Không thể cập nhật trạng thái: ${err.message}`);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handlePageChange = (newPage) => {
-    setPagination(prev => ({ ...prev, currentPage: newPage }));
-    queryRef.current = { ...queryRef.current, page: newPage };
-    // Remove fetchOrders() here
   };
 
   const statusOptions = [
@@ -200,7 +193,7 @@ const Orders = () => {
             setSearch={setSearchTerm}
             search={searchTerm}
             queryRef={queryRef}
-            keySearch="$Customer.fullName$" 
+            keySearch="$Customer.fullName$"
           />
           <Select 
             options={statusOptions}
@@ -215,7 +208,6 @@ const Orders = () => {
               setStatusFilter("all");
               setPagination(prev => ({ ...prev, currentPage: 1 }));
               queryRef.current = {};
-              setTimeout(() => fetchOrders(), 0);
             }}
             className="px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-md border border-blue-600"
           >
@@ -250,7 +242,6 @@ const Orders = () => {
             onUpdateStatus={handleUpdateOrderStatus}
             onDelete={handleDeleteOrder}
           />
-
           {pagination.totalPages > 1 && (
             <Pagination 
               pagination={pagination} 

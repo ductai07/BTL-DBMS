@@ -66,7 +66,6 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
       const data = await response.json();
       if (data && Array.isArray(data.data)) {
         setTickets(data.data);
-        console.log("Fetched tickets:", data.data);
       }
     } catch (error) {
       console.error("Error fetching tickets:", error);
@@ -263,6 +262,23 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
       setLoading(false);
     }
   };
+  const formatTime = (timeString) => {
+    if (!timeString) return "N/A";
+  
+    // Nếu chuỗi là dạng full datetime thì cắt lấy phần giờ
+    if (timeString.includes("T")) {
+      const timePart = timeString.split("T")[1]?.split(".")[0];
+      if (timePart) return timePart.slice(0, 5); // Lấy "hh:mm"
+    }
+  
+    // Nếu chuỗi là dạng "hh:mm:ss" thì rút gọn lại
+    if (timeString.length >= 5) {
+      return timeString.slice(0, 5);
+    }
+  
+    return timeString;
+  };
+  
 
   return (
     isOpen && (
@@ -348,7 +364,7 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
                 <option value="">Chọn vé</option>
                 {tickets.map((t) => (
                   <option key={t.id} value={t.id}>
-                    Vé #{t.id} - {t.movieTitle} - Ghế {t.seatNumber} - Khung giờ: {t.showTime} - {formatCurrency(t.price)}
+                    Vé #{t.id} - {t.movieTitle} - Ghế {t.seatPosition} - Khung giờ {formatTime(t.showTime)} - {formatCurrency(t.price)}
                   </option>
                 ))}
               </select>

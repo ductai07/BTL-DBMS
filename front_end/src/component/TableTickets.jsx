@@ -54,6 +54,23 @@ const TableTickets = ({
         return status;
     }
   };
+  const formatTime = (timeString) => {
+    if (!timeString) return "N/A";
+  
+    // Nếu chuỗi là dạng full datetime thì cắt lấy phần giờ
+    if (timeString.includes("T")) {
+      const timePart = timeString.split("T")[1]?.split(".")[0];
+      if (timePart) return timePart.slice(0, 5); // Lấy "hh:mm"
+    }
+  
+    // Nếu chuỗi là dạng "hh:mm:ss" thì rút gọn lại
+    if (timeString.length >= 5) {
+      return timeString.slice(0, 5);
+    }
+  
+    return timeString;
+  };
+  
 
   return (
     <div className="overflow-x-auto bg-white rounded-xl shadow-md">
@@ -93,7 +110,7 @@ const TableTickets = ({
                   {formatDate(ticket.showDate)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {ticket.showTime || "N/A"}
+                  {formatTime(ticket.showTime) || "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {formatCurrency(ticket.price)}
