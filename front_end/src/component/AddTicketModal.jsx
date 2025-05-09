@@ -4,7 +4,7 @@ import { IoClose } from "react-icons/io5";
 const AddTicketModal = ({
   isOpen,
   onClose,
-  onSave
+  onAddTicket  // Đổi từ onSave thành onAddTicket
 }) => {
   const [movies, setMovies] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -18,6 +18,7 @@ const AddTicketModal = ({
   const [selectedSeat, setSelectedSeat] = useState("");
   const [price, setPrice] = useState("");
   const [customerId, setCustomerId] = useState("");
+  // Xóa state status
 
   // Fetch movies when modal is opened
   useEffect(() => {
@@ -30,6 +31,7 @@ const AddTicketModal = ({
       setSelectedSeat("");
       setPrice("");
       setCustomerId("");
+      // Xóa reset status
     }
   }, [isOpen]);
 
@@ -138,11 +140,12 @@ const AddTicketModal = ({
       seat_id: parseInt(selectedSeat),
       price: parseFloat(price),
       bookingDate: new Date().toISOString().split('T')[0],
+      // Xóa trường status
       // Add customer ID if provided, otherwise it will be handled by the backend
       ...(customerId && { customer_id: parseInt(customerId) })
     };
     
-    onSave(newTicket);
+    onAddTicket(newTicket);  // Đổi từ onSave thành onAddTicket
   };
 
   if (!isOpen) return null;
@@ -190,7 +193,7 @@ const AddTicketModal = ({
                 </label>
                 <select
                   value={selectedMovie}
-                  onChange={(e) => setSelectedMovie(e.target.value)}
+                  onChange={(e) => setSelectedMovie(parseInt(e.target.value) || "")}
                   className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
                   required
                 >
@@ -272,6 +275,8 @@ const AddTicketModal = ({
                   className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
               </div>
+              
+              {/* Xóa trường select cho status */}
             </div>
 
             <div className="mt-6 flex justify-end">

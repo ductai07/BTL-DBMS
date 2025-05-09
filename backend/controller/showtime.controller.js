@@ -136,6 +136,44 @@ module.exports.index = async (req, res) => {
             // Calculate showtime status based on date
             const status = determineShowtimeStatus(plainShowtime.showDate, plainShowtime.startTime);
             
+            // Helper function to determine showtime status based on date
+            function determineShowtimeStatus(showDate, startTime) {
+                if (!showDate) return "Sắp chiếu";
+                
+                const today = new Date();
+                const showtimeDate = new Date(showDate);
+                
+                // Reset today's time to 00:00:00 for date comparison
+                today.setHours(0, 0, 0, 0);
+                showtimeDate.setHours(0, 0, 0, 0);
+                
+                // If showtime is in the past
+                if (showtimeDate < today) {
+                    return "Đã chiếu";
+                }
+                
+                // If showtime is in the future
+                if (showtimeDate > today) {
+                    return "Sắp chiếu";
+                }
+                
+                // If showtime is today, check the time
+                if (startTime) {
+                    const now = new Date();
+                    const [hours, minutes] = startTime.split(':').map(Number);
+                    const showtimeToday = new Date();
+                    showtimeToday.setHours(hours, minutes, 0, 0);
+                    
+                    if (now > showtimeToday) {
+                        return "Đang chiếu";
+                    } else {
+                        return "Sắp chiếu";
+                    }
+                }
+                
+                return "Sắp chiếu";
+            }
+            
             // Format as needed for the frontend
             return {
                 id: plainShowtime.id,
@@ -187,44 +225,6 @@ module.exports.index = async (req, res) => {
         });
     }
 };
-
-// Helper function to determine showtime status based on date
-function determineShowtimeStatus(showDate, startTime) {
-    if (!showDate) return "Sắp chiếu";
-    
-    const today = new Date();
-    const showtimeDate = new Date(showDate);
-    
-    // Reset today's time to 00:00:00 for date comparison
-    today.setHours(0, 0, 0, 0);
-    showtimeDate.setHours(0, 0, 0, 0);
-    
-    // If showtime is in the past
-    if (showtimeDate < today) {
-        return "Đã chiếu";
-    }
-    
-    // If showtime is in the future
-    if (showtimeDate > today) {
-        return "Sắp chiếu";
-    }
-    
-    // If showtime is today, check the time
-    if (startTime) {
-        const now = new Date();
-        const [hours, minutes] = startTime.split(':').map(Number);
-        const showtimeToday = new Date();
-        showtimeToday.setHours(hours, minutes, 0, 0);
-        
-        if (now > showtimeToday) {
-            return "Đang chiếu";
-        } else {
-            return "Sắp chiếu";
-        }
-    }
-    
-    return "Sắp chiếu";
-}
 
 // Simple showtime endpoint without complex joins (for fallback)
 module.exports.simple = async (req, res) => {

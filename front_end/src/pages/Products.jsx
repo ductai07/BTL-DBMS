@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Header } from "../component/Header";
 import AddProductModal from "../component/AddProductModal";
 import ProductDetailsModal from "../component/ProductDetailsModal";
@@ -41,74 +41,39 @@ const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   // Fetch products with search and category filter
+  // Fetch products with search and category filter
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      // First try the new API format
+      // Use the API_ENDPOINTS constant for consistency
       let url = `${API_ENDPOINTS.PRODUCTS}?page=${currentPage}&limit=${perPage}`;
       
       // Add search parameter if present
       if (searchText) {
-        url += `&search=${encodeURIComponent(searchText)}`;
+        url += `&SearchKey=name&SearchValue=${encodeURIComponent(searchText)}`;
       }
       
       // Add category filter if not "All"
       if (selectedCategory !== "All") {
-        url += `&category=${encodeURIComponent(selectedCategory)}`;
+        // Sửa tham số category thành SearchKey và SearchValue
+        url += `&SearchKey=category&SearchValue=${encodeURIComponent(selectedCategory)}`;
       }
       
       console.log("Fetching products from URL:", url);
       
-      try {
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch products. Status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("Products data received:", data);
-        
-        // Check if we got the expected data structure
-        if (data.products || data.data) {
-          setProducts(data.products || data.data || []);
-          setTotalPages(data.totalPages || data.pagination?.totalPages || 1);
-          setTotalProducts(data.totalCount || data.pagination?.total || 0);
-          return;
-        } else {
-          throw new Error("Invalid data format received");
-        }
-      } catch (err) {
-        console.warn("New API format failed, trying legacy format:", err);
-        // Fall through to try legacy format
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch products. Status: ${response.status}`);
       }
       
-      // Try legacy API format as fallback
-      let legacyUrl = `${API_BASE_URL}/product?Page=${currentPage}&Limit=${perPage}`;
+      const data = await response.json();
+      console.log("Products data received:", data);
       
-      if (searchText) {
-        legacyUrl += `&SearchKey=name&SearchValue=${encodeURIComponent(searchText)}`;
-      }
-      
-      if (selectedCategory !== "All") {
-        legacyUrl += `&category=${encodeURIComponent(selectedCategory)}`;
-      }
-      
-      console.log("Trying legacy API format:", legacyUrl);
-      
-      const legacyResponse = await fetch(legacyUrl);
-      
-      if (!legacyResponse.ok) {
-        throw new Error(`Failed to fetch products using legacy API. Status: ${legacyResponse.status}`);
-      }
-      
-      const legacyData = await legacyResponse.json();
-      console.log("Legacy products data received:", legacyData);
-      
-      // Transform data to expected format
-      const formattedProducts = (legacyData.data || []).map(product => ({
+      // Standardize the data format
+      const formattedProducts = (data.data || []).map(product => ({
         id: product.id,
         name: product.name || "Unknown Product",
         price: product.price || 0,
@@ -119,9 +84,8 @@ const Products = () => {
       }));
       
       setProducts(formattedProducts);
-      setTotalPages(legacyData.pagination?.totalPages || 1);
-      setTotalProducts(legacyData.pagination?.total || 0);
-      
+      setTotalPages(data.pagination?.totalPages || 1);
+      setTotalProducts(data.pagination?.total || 0);
     } catch (err) {
       console.error("Error fetching products:", err);
       setError(err.message || "Failed to fetch products");
@@ -149,18 +113,29 @@ const Products = () => {
     try {
       const isEditing = newProduct.id !== undefined;
       
-      const url = isEditing 
-        ? API_ENDPOINTS.PRODUCT_DETAILS(newProduct.id)
-        : API_ENDPOINTS.PRODUCTS;
+      // Chuyển đổi dữ liệu để phù hợp với backend
+      const productData = {
+        name: newProduct.name,
+        price: parseFloat(newProduct.price),
+        description: newProduct.description || '',
+        // Chuyển đổi inStock thành quantity
+        quantity: newProduct.inStock ? (newProduct.quantity || 10) : 0,
+        // Sử dụng category làm unit nếu không có unit
+        unit: newProduct.unit || newProduct.category || 'Đơn vị'
+      };
       
-      const method = isEditing ? "PUT" : "POST";
+      const url = isEditing 
+        ? API_ENDPOINTS.PRODUCT_EDIT(newProduct.id)
+        : API_ENDPOINTS.PRODUCT_ADD;
+      
+      const method = isEditing ? "PATCH" : "POST";
       
       const response = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newProduct),
+        body: JSON.stringify(productData),
       });
       
       if (!response.ok) {
@@ -190,7 +165,7 @@ const Products = () => {
     setLoading(true);
     
     try {
-      const response = await fetch(API_ENDPOINTS.PRODUCT_DETAILS(id), {
+      const response = await fetch(API_ENDPOINTS.PRODUCT_DELETE(id), {
         method: "DELETE",
       });
       
@@ -223,10 +198,37 @@ const Products = () => {
   };
 
   // Handle category change
+  // Tạo queryRef để lưu trữ các tham số tìm kiếm
+  const queryRef = useRef({});
+  
+  // Chuyển đổi categories thành định dạng cũ
+  const categoryOptions = [
+  { key: "all", value: "Tất cả danh mục" },
+  { key: "Popcorn", value: "Popcorn" },
+  { key: "Drink", value: "Drink" },
+  { key: "Combo", value: "Combo" },
+  { key: "Other", value: "Other" }
+  ];
+  
+  // Thay đổi hàm handleCategoryChange
+  // Handle category change
   const handleCategoryChange = (category) => {
-    setSelectedCategory(category);
-    setCurrentPage(1); // Reset to first page when changing category
+  setSelectedCategory(category);
+  setCurrentPage(1); // Reset to first page when changing category
+  // Gọi fetchProducts ngay sau khi thay đổi danh mục
+  setTimeout(() => fetchProducts(), 0);
   };
+  
+  // Trong phần render, thay đổi component Select
+  <Select
+  options={categoryOptions}
+  placeholder="All Categories"
+  value={selectedCategory}
+  onChange={handleCategoryChange}
+  keySearch="category"
+  queryRef={queryRef}
+  size="sm"
+  />
 
   // Open Add/Edit modal
   const openAddModal = (product = null) => {
@@ -247,13 +249,14 @@ const Products = () => {
   };
 
   return (
-    <div className="container-fluid mt-5">
+    // Thay đổi container chính để thêm padding
+    <div className="container-fluid mt-5 px-4 pb-6">
       <Header
         title="Products"
         description="Manage your cinema's products and services"
       />
-
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center my-4 gap-3">
+    
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center my-6 gap-4">
         <div className="flex flex-col md:flex-row gap-3 w-full lg:w-auto">
           {/* Search bar */}
           <div className="relative w-full md:w-80">
@@ -275,7 +278,7 @@ const Products = () => {
           </div>
 
           {/* Category filter */}
-          <div className="w-full md:w-auto">
+          {/* <div className="w-full md:w-auto">
             <Select
               options={categories}
               placeholder="All Categories"
@@ -283,7 +286,7 @@ const Products = () => {
               setSelected={handleCategoryChange}
               size="sm"
             />
-          </div>
+          </div> */}
         </div>
 
         <div className="flex flex-col md:flex-row gap-3 w-full lg:w-auto">

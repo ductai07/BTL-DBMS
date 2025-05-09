@@ -26,4 +26,7 @@ router.delete('/:id/product/:productUsageId', Controller.removeProduct);
 // Thanh toán hóa đơn
 router.patch('/payment/:id', Controller.payment);
 
+// Xóa hóa đơn
+router.delete('/delete/:id', Controller.delete);
+
 module.exports = router;

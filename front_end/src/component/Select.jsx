@@ -14,7 +14,7 @@ export const Select = ({
   keySearch,
   queryRef,
   defaultValue,
-  setDefault
+  setDefault,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef(null);
@@ -41,14 +41,17 @@ export const Select = ({
   };
 
   // Check if options are in old format (objects with key/value) or new format (simple values)
-  const isOldFormat = options.length > 0 && typeof options[0] === 'object' && options[0].hasOwnProperty('value');
+  const isOldFormat =
+    options.length > 0 &&
+    typeof options[0] === "object" &&
+    options[0].hasOwnProperty("value");
 
   // Handle change for old interface
   const handleChangeOld = (option) => {
     if (onChange) {
       onChange(option.key);
     }
-    
+
     if (setDefault) {
       setDefault(option.value);
     }
@@ -57,7 +60,7 @@ export const Select = ({
     if (localStorage && keyStorage) {
       localStorage.setItem(keyStorage, option.value);
     }
-    
+
     // Handle query ref if needed
     if (queryRef && keySearch) {
       if (option.key === "all" || option.key === "") {
@@ -65,8 +68,13 @@ export const Select = ({
       } else {
         queryRef.current[keySearch] = option.key;
       }
+      
+      if (keySearch === "status") {
+        queryRef.current.SearchKey = "status";
+        queryRef.current.SearchValue = option.key; // Sửa: dùng option.key thay vì option.value
+      }
     }
-    
+
     setIsOpen(false);
   };
 
@@ -80,16 +88,17 @@ export const Select = ({
 
   // For old interface, render a standard dropdown
   if (isOldFormat) {
-    // Find the currently selected option
-    const currentOption = options.find(opt => opt.value === defaultValue) || options[0];
-    
+    // Find the currently selected option based on value first, then defaultValue
+    const currentOption =
+      options.find((opt) => opt.key === value) ||
+      options.find((opt) => opt.value === defaultValue) ||
+      options[0];
+
     return (
       <div className="relative" ref={selectRef}>
         <button
           type="button"
-          className={`flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            sizeClasses[size]
-          }`}
+          className={`flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 ${sizeClasses[size]}`}
           onClick={() => setIsOpen(!isOpen)}
           aria-haspopup="true"
           aria-expanded={isOpen}
@@ -111,7 +120,9 @@ export const Select = ({
                 <li
                   key={index}
                   className={`cursor-pointer px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 ${
-                    currentOption?.value === option.value ? "bg-blue-50 text-blue-600" : ""
+                    currentOption?.value === option.value
+                      ? "bg-blue-50 text-blue-600"
+                      : ""
                   }`}
                   onClick={() => handleChangeOld(option)}
                 >
@@ -130,16 +141,12 @@ export const Select = ({
     <div className="relative" ref={selectRef}>
       <button
         type="button"
-        className={`flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-          sizeClasses[size]
-        }`}
+        className={`flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 ${sizeClasses[size]}`}
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
-        <span className="truncate">
-          {selected || placeholder}
-        </span>
+        <span className="truncate">{selected || placeholder}</span>
         <IoChevronDown
           className={`ml-2 transition-transform duration-200 ${
             isOpen ? "transform rotate-180" : ""

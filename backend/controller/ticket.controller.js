@@ -6,7 +6,7 @@ const sequelize = require('../config/database');
 module.exports.index = async (req, res) => {
     try {
         // Lấy các tham số từ query
-        const { SearchKey, SearchValue, SortKey, SortValue, Page, Limit, status, showtimeId, movieId, cinemaId } = req.query;
+        const { SearchKey, SearchValue, SortKey, SortValue, Page, Limit, status, showtimeId, movieId, cinemaId, date } = req.query;
 
         // Khởi tạo các biến mặc định
         let where = {};
@@ -30,11 +30,18 @@ module.exports.index = async (req, res) => {
             where['$ShowTime.Room.cinema_id$'] = cinemaId;
         }
 
+        // Lọc theo ngày chiếu
+        if (date) {
+            where['$ShowTime.showDate$'] = date;
+        }
+
         // Lọc theo trạng thái hóa đơn
         if (status) {
             where['$Invoice.status$'] = status;
         }
 
+        // Phần còn lại của hàm giữ nguyên
+        // ...
         // Xử lý tìm kiếm
         if (SearchKey && SearchValue) {
             where = {
@@ -202,8 +209,9 @@ module.exports.detail = async (req, res) => {
 
 // Thêm vé mới
 module.exports.add = async (req, res) => {
+    const transaction = await sequelize.transaction();
     try {
-        const { showtime_id, seat_id, price, invoice_id } = req.body;
+        const { showtime_id, seat_id, price, invoice_id, bookingDate } = req.body;
 
         // Kiểm tra tham số bắt buộc
         if (!showtime_id || !seat_id) {
@@ -217,27 +225,49 @@ module.exports.add = async (req, res) => {
             where: {
                 showtime_id,
                 seat_id
-            }
+            },
+            transaction
         });
 
         if (existingTicket) {
+            await transaction.rollback();
             return res.status(400).json({
                 message: 'Ghế này đã được đặt cho lịch chiếu đã chọn'
             });
         }
 
-        // Tạo vé mới
-        const newTicket = await Model.Ticket.create({
+        // Tạo dữ liệu vé mới
+        const ticketData = {
             showtime_id,
             seat_id,
             price: price || 0,
-            invoice_id,
-            bookingDate: new Date(),
+            invoice_id: invoice_id || null,
+            bookingDate: bookingDate || new Date().toISOString().split('T')[0],
             qrCode: `TICKET-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-        });
+        };
+
+        // Sửa câu lệnh SQL để không thêm trường status
+        const [result] = await sequelize.query(
+            `DECLARE @OutputTable TABLE (id INT);
+             INSERT INTO Ticket (showtime_id, seat_id, price, invoice_id, bookingDate, qrCode) 
+             OUTPUT INSERTED.id INTO @OutputTable
+             VALUES (:showtime_id, :seat_id, :price, :invoice_id, :bookingDate, :qrCode);
+             SELECT id FROM @OutputTable;`,
+            {
+                replacements: ticketData,
+                type: sequelize.QueryTypes.INSERT,
+                transaction
+            }
+        );
+
+        // Lấy ID của vé vừa tạo
+        const newTicketId = result[0].id;
+
+        // Commit transaction
+        await transaction.commit();
 
         // Lấy thông tin vé vừa tạo kèm các thông tin liên quan
-        const ticket = await Model.Ticket.findByPk(newTicket.id, {
+        const ticket = await Model.Ticket.findByPk(newTicketId, {
             include: [
                 {
                     model: Model.ShowTime,
@@ -266,6 +296,10 @@ module.exports.add = async (req, res) => {
             data: ticket
         });
     } catch (error) {
+        // Rollback transaction nếu có lỗi
+        if (transaction) await transaction.rollback();
+        
+        console.error('Chi tiết lỗi khi tạo vé:', error);
         res.status(500).json({
             message: 'Lỗi khi tạo vé',
             error: error.message

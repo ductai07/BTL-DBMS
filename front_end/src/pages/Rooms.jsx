@@ -13,7 +13,7 @@ const Rooms = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [cinemaOptions, setCinemaOptions] = useState([
-    { key: "", value: "Tất cả" }
+    { key: "", value: "Tất cả" },
   ]);
   const queryRef = useRef({
     SearchKey: "",
@@ -25,7 +25,7 @@ const Rooms = () => {
     cinemaId: "",
     type: "",
   });
-  
+
   // Fetch cinema options
   useEffect(() => {
     const fetchCinemas = async () => {
@@ -35,25 +35,25 @@ const Rooms = () => {
           throw new Error("Failed to fetch cinemas");
         }
         const data = await response.json();
-        
+
         // Format data for dropdown
         const options = [
           { key: "", value: "Tất cả" },
-          ...(data.data || []).map(cinema => ({
+          ...(data.data || []).map((cinema) => ({
             key: cinema.id,
-            value: cinema.name
-          }))
+            value: cinema.name,
+          })),
         ];
-        
+
         setCinemaOptions(options);
       } catch (error) {
         console.error("Error fetching cinemas:", error);
       }
     };
-    
+
     fetchCinemas();
   }, []);
-  
+
   // Fetch initial room data
   useEffect(() => {
     const fetchRooms = async () => {
@@ -69,7 +69,7 @@ const Rooms = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchRooms();
   }, []);
 
@@ -212,7 +212,7 @@ const Rooms = () => {
     try {
       // Ensure current page is set in query
       queryRef.current.Page = currentPage;
-      
+
       // Clean up empty parameters to avoid unnecessary URL parameters
       const cleanParams = {};
       for (const [key, value] of Object.entries(queryRef.current)) {
@@ -220,23 +220,25 @@ const Rooms = () => {
           cleanParams[key] = value;
         }
       }
-      
+
       const queryString = new URLSearchParams(cleanParams).toString();
       console.log("Searching with query:", queryString);
-      
+
       const response = await fetch(`http://localhost:3000/room?${queryString}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       setRooms(data.data || []);
-      setPagination(data.pagination || {
-        currentPage: 1,
-        totalPages: 1,
-        total: data.data?.length || 0
-      });
+      setPagination(
+        data.pagination || {
+          currentPage: 1,
+          totalPages: 1,
+          total: data.data?.length || 0,
+        }
+      );
     } catch (error) {
       console.error("Error searching rooms:", error);
       // Show empty results in case of error
@@ -244,7 +246,7 @@ const Rooms = () => {
       setPagination({
         currentPage: 1,
         totalPages: 1,
-        total: 0
+        total: 0,
       });
     } finally {
       setIsLoading(false);
@@ -271,21 +273,21 @@ const Rooms = () => {
       Page: 1,
       Limit: 10,
       cinemaId: "",
-      type: ""
+      type: "",
     };
-    
+
     // Reset state values
     setSearch("");
     setDefaultCinemas("");
     setDefaultRoomTypes("");
     setCurrentPage(1);
-    
+
     // Save to localStorage
     if (localStorage) {
       localStorage.removeItem("keyCinemas");
       localStorage.removeItem("keyRoomTypes");
     }
-    
+
     // Trigger a new search with reset parameters
     handleSearch();
   };
@@ -375,9 +377,11 @@ const Rooms = () => {
             </div>
           ) : rooms.length === 0 ? (
             <div className="bg-white p-8 rounded-lg text-center shadow-md">
-              <p className="text-gray-500">Không tìm thấy phòng nào phù hợp với tìm kiếm.</p>
-              <button 
-                onClick={handleReset} 
+              <p className="text-gray-500">
+                Không tìm thấy phòng nào phù hợp với tìm kiếm.
+              </p>
+              <button
+                onClick={handleReset}
                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Xem tất cả phòng

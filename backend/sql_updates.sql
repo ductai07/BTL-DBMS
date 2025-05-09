@@ -59,7 +59,6 @@ END
 -- Check if 'status' column exists in ShowTime table
 IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ShowTime' AND COLUMN_NAME = 'status')
 BEGIN
-    -- Add status column if it doesn't exist
     ALTER TABLE ShowTime ADD status NVARCHAR(50) NULL DEFAULT N'Sắp chiếu';
     PRINT 'Added status column to ShowTime table';
 END
@@ -67,6 +66,9 @@ ELSE
 BEGIN
     PRINT 'Status column already exists in ShowTime table';
 END
+
+-- Update null status values
+UPDATE ShowTime SET status = N'Sắp chiếu' WHERE status IS NULL;
 
 -- Fix character encoding for status column
 UPDATE ShowTime 
@@ -211,4 +213,4 @@ FROM
 WHERE 
     TABLE_NAME = 'Discount'
 ORDER BY 
-    ORDINAL_POSITION; 
+    ORDINAL_POSITION;

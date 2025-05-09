@@ -153,10 +153,17 @@ const Tickets = () => {
   const [movieFilter, setMovieFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [timeFilter, setTimeFilter] = useState("all"); // Thêm state cho timeFilter
   
   // Options for filters
   const [movieOptions, setMovieOptions] = useState([{ key: "all", value: "Tất cả phim" }]);
   const [dateOptions, setDateOptions] = useState([{ key: "all", value: "Tất cả ngày" }]);
+  const [timeOptions, setTimeOptions] = useState([  // Thêm options cho timeFilter
+    { key: "all", value: "Tất cả giờ" },
+    { key: "morning", value: "Sáng (trước 12h)" },
+    { key: "afternoon", value: "Chiều (12h-18h)" },
+    { key: "evening", value: "Tối (sau 18h)" }
+  ]);
   
   const statusOptions = [
     { key: "all", value: "Tất cả trạng thái" },
@@ -195,6 +202,10 @@ const Tickets = () => {
       
       if (statusFilter !== "all") {
         url += `&status=${statusFilter}`;
+      }
+      
+      if (timeFilter !== "all") {
+        url += `&timeRange=${timeFilter}`;
       }
       
       if (searchTerm) {
@@ -244,6 +255,11 @@ const Tickets = () => {
         total: data.pagination?.total || 0
       });
       setError(null);
+      
+      // Hiển thị thông báo nếu không có kết quả
+      if (formattedTickets.length === 0) {
+        setError("Không tìm thấy vé nào phù hợp với bộ lọc. Vui lòng thử lại với bộ lọc khác.");
+      }
     } catch (err) {
       console.error("Error fetching tickets:", err);
       setError("Không thể tải dữ liệu vé. Vui lòng thử lại sau.");
@@ -270,22 +286,47 @@ const Tickets = () => {
   // Fetch movies for filter dropdown
   const fetchMovies = async () => {
     try {
-      const response = await fetch('http://localhost:3000/movie');
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      // Lấy danh sách lịch chiếu để biết phim nào đang có lịch
+      const showtimeResponse = await fetch('http://localhost:3000/showtime');
+      if (!showtimeResponse.ok) throw new Error(`HTTP error! status: ${showtimeResponse.status}`);
       
-      const data = await response.json();
+      const showtimeData = await showtimeResponse.json();
+      
+      // Tạo set các ID phim có lịch chiếu
+      const movieIdsWithShowtimes = new Set();
+      (showtimeData.data || []).forEach(showtime => {
+        if (showtime.movieId || showtime.movie_id) {
+          movieIdsWithShowtimes.add((showtime.movieId || showtime.movie_id).toString());
+        }
+      });
+      
+      // Lấy thông tin chi tiết về phim
+      const movieResponse = await fetch('http://localhost:3000/movie');
+      if (!movieResponse.ok) throw new Error(`HTTP error! status: ${movieResponse.status}`);
+      
+      const movieData = await movieResponse.json();
+      
+      // Lọc chỉ các phim có lịch chiếu
+      const filteredMovies = (movieData.data || []).filter(movie => 
+        movieIdsWithShowtimes.has(movie.id.toString())
+      );
+      
       const options = [
         { key: "all", value: "Tất cả phim" },
-        ...(data.data || []).map(movie => ({
+        ...filteredMovies.map(movie => ({
           key: movie.id.toString(),
           value: movie.title
-        }))
+        })).sort((a, b) => {
+          if (a.key === "all") return -1;
+          if (b.key === "all") return 1;
+          return a.value.localeCompare(b.value);
+        })
       ];
       
       setMovieOptions(options);
     } catch (err) {
       console.error("Error fetching movies:", err);
-      // Keep default options if fetch fails
+      // Giữ tùy chọn mặc định nếu fetch thất bại
     }
   };
 
@@ -301,7 +342,12 @@ const Tickets = () => {
         ...(data.data || []).map(date => ({
           key: date,
           value: formatDate(date)
-        }))
+        })).sort((a, b) => {
+          // Sắp xếp ngày theo thứ tự tăng dần
+          if (a.key === "all") return -1;
+          if (b.key === "all") return 1;
+          return new Date(a.key) - new Date(b.key);
+        })
       ];
       
       setDateOptions(options);
@@ -320,7 +366,7 @@ const Tickets = () => {
   // Fetch tickets when filters or pagination changes
   useEffect(() => {
     fetchTickets();
-  }, [pagination.currentPage, movieFilter, dateFilter, statusFilter]);
+  }, [pagination.currentPage, movieFilter, dateFilter, statusFilter, timeFilter]);
 
   // Handle search with debounce
   useEffect(() => {
@@ -356,6 +402,9 @@ const Tickets = () => {
         break;
       case 'status':
         setStatusFilter(value);
+        break;
+      case 'time':
+        setTimeFilter(value);
         break;
       default:
         break;
@@ -404,6 +453,7 @@ const Tickets = () => {
 
   // Handle adding a new ticket
   const handleAddTicket = async (ticketData) => {
+    console.log("Adding ticket with data:", ticketData);
     try {
       setLoading(true);
       const response = await fetch('http://localhost:3000/ticket/add', {
@@ -416,6 +466,7 @@ const Tickets = () => {
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Server error response:", errorData);
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
       
@@ -425,7 +476,7 @@ const Tickets = () => {
       alert("Thêm vé thành công!");
     } catch (err) {
       console.error("Error adding ticket:", err);
-      alert(`Không thể thêm vé: ${err.message}`);
+      alert(`Không thể thêm vé: ${err.message || 'Lỗi không xác định'}`);
     } finally {
       setLoading(false);
     }
@@ -567,6 +618,7 @@ const Tickets = () => {
     setMovieFilter("all");
     setDateFilter("all");
     setStatusFilter("all");
+    setTimeFilter("all"); // Reset timeFilter
     setPagination(prev => ({
       ...prev,
       currentPage: 1
@@ -574,17 +626,13 @@ const Tickets = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
+    <div className="p-6">
       <Header title="Quản lý vé" />
       
       {/* Controls */}
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <div className="flex flex-wrap items-center gap-3">
-          <Search 
-            placeholder="Tìm kiếm theo khách hàng, phim..." 
-            setSearch={setSearchTerm}
-            search={searchTerm}
-          />
+          {/* Remover este componente Search */}
           
           <Select 
             options={movieOptions}
@@ -598,11 +646,17 @@ const Tickets = () => {
             onChange={(value) => handleFilterChange('date', value)}
           />
           
-          <Select 
+          {/* <Select 
+            options={timeOptions}
+            value={timeFilter}
+            onChange={(value) => handleFilterChange('time', value)}
+          /> */}
+          
+          {/* <Select 
             options={statusOptions}
             value={statusFilter}
             onChange={(value) => handleFilterChange('status', value)}
-          />
+          /> */}
           
           <button
             onClick={handleResetFilters}
@@ -709,7 +763,7 @@ const Tickets = () => {
       <AddTicketModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onAddTicket={handleAddTicket}
+        onAddTicket={handleAddTicket}  // Đổi từ onSave thành onAddTicket để khớp với AddTicketModal.jsx
       />
 
       {/* Ticket Details Modal */}

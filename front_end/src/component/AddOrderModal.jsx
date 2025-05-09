@@ -25,12 +25,17 @@ const AddOrderModal = ({
   });
 
   // Reset form when modal closes
+  // Thêm vào phần khai báo state
+  const [status, setStatus] = useState("Chưa thanh toán");
+  
+  // Thêm vào phần reset form
   useEffect(() => {
     if (!isOpen) {
       setItems([]);
       setTotalAmount(0);
       setCustomer({ name: "", phone: "" });
       setPaymentMethod("");
+      setStatus("Chưa thanh toán"); // Reset trạng thái
       setNewItem({
         product_id: "",
         name: "",
@@ -71,8 +76,10 @@ const AddOrderModal = ({
     setCustomer(prev => ({ ...prev, [name]: value }));
   };
 
+  // Trong hàm handleSubmit
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("Submit button clicked");
     
     if (items.length === 0) {
       alert("Vui lòng thêm ít nhất một sản phẩm vào đơn hàng");
@@ -81,6 +88,7 @@ const AddOrderModal = ({
     
     try {
       setLoading(true);
+      console.log("Creating invoice...");
       
       // Step 1: Create the invoice
       const createResponse = await fetch("http://localhost:3000/invoice/create", {
@@ -89,12 +97,17 @@ const AddOrderModal = ({
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          note: `Customer: ${customer.name} - ${customer.phone}`
+          note: `Customer: ${customer.name} - ${customer.phone}`,
+          status: status
         })
       });
       
+      console.log("Create response:", createResponse);
+      
       if (!createResponse.ok) {
-        throw new Error("Failed to create invoice");
+        const errorData = await createResponse.json();
+        console.error("Error data:", errorData);
+        throw new Error(errorData.message || "Failed to create invoice");
       }
       
       const invoiceData = await createResponse.json();
@@ -272,6 +285,21 @@ const AddOrderModal = ({
             <div className="bg-gray-50 p-4 rounded-md mb-4">
               <div className="grid grid-cols-12 gap-2 mb-3">
                 <div className="col-span-5">
+                <div>
+                  <label className="block text-gray-700 text-sm font-medium mb-1">
+                    Trạng thái đơn hàng
+                  </label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    required
+                  >
+                    <option value="Chưa thanh toán">Chưa thanh toán</option>
+                    <option value="Đã thanh toán">Đã thanh toán</option>
+                    <option value="Đã hủy">Đã hủy</option>
+                  </select>
+                </div>
                   <label className="block text-gray-700 text-xs font-medium mb-1">
                     Sản phẩm
                   </label>
@@ -438,3 +466,4 @@ const AddOrderModal = ({
 };
 
 export default AddOrderModal;
+

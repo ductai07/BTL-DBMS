@@ -2,10 +2,10 @@ const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize({
   dialect: 'mssql',
-  host: 'localhost', // hoặc '.' nếu cùng máy
-  database: 'QL', // tên DB của bạn
+  host: 'CHINHPHAM', // hoặc '.' nếu cùng máy
+  database: 'LMQ2', // tên DB của bạn
   username: 'sa', // tài khoản sa
-  password: '111111', // mật khẩu
+  password: '2411', // mật khẩu
   dialectOptions: {
     options: {
       encrypt: false, // Không mã hóa kết nối (có thể bật lên nếu cần)
@@ -20,7 +20,7 @@ sequelize
   .then(() => {
     console.log('Kết nối thành công đến SQL Server.');
   })
-  .catch((err) => { 
+  .catch((err) => {
     console.error('Chi tiết lỗi kết nối:', err);
     console.error('Message:', err.message);
     console.error('Original error:', err.original);

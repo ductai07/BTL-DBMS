@@ -12,27 +12,28 @@ const TabelShowTime = ({
   // Function to format time (HH:MM:SS to HH:MM AM/PM)
   const formatTime = (timeString) => {
     if (!timeString) return "N/A";
-    
+
     // If the timeString already includes a date part (like "1970-"), extract just the time portion
-    if (timeString.includes('1970-') || timeString.includes('T')) {
+    if (timeString.includes("1970-") || timeString.includes("T")) {
       // Extract just the time portion from a full datetime string
-      const timePart = timeString.split('T')[1]?.split('.')[0] || timeString.split(' ')[1];
+      const timePart =
+        timeString.split("T")[1]?.split(".")[0] || timeString.split(" ")[1];
       if (timePart) {
         timeString = timePart;
       }
     }
-    
+
     try {
       // For handling just time strings like "HH:MM:SS"
-      const [hours, minutes] = timeString.split(':');
+      const [hours, minutes] = timeString.split(":");
       const h = parseInt(hours, 10);
       const m = parseInt(minutes, 10);
-      
+
       if (isNaN(h) || isNaN(m)) return "Invalid Time";
-      
-      const period = h >= 12 ? 'PM' : 'AM';
+
+      const period = h >= 12 ? "PM" : "AM";
       const hour12 = h % 12 || 12;
-      return `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
+      return `${hour12}:${m.toString().padStart(2, "0")} ${period}`;
     } catch (error) {
       console.error("Error formatting time:", error, timeString);
       return "Invalid Time";
@@ -42,15 +43,15 @@ const TabelShowTime = ({
   // Function to format date (YYYY-MM-DD to DD/MM/YYYY)
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    
+
     try {
       const dateObj = new Date(dateString);
       if (isNaN(dateObj.getTime())) return "Invalid Date";
-      
-      const day = dateObj.getDate().toString().padStart(2, '0');
-      const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+
+      const day = dateObj.getDate().toString().padStart(2, "0");
+      const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
       const year = dateObj.getFullYear();
-      
+
       return `${day}/${month}/${year}`;
     } catch (error) {
       console.error("Error formatting date:", error, dateString);
@@ -61,13 +62,16 @@ const TabelShowTime = ({
   // Function to format price (if available)
   const formatPrice = (price) => {
     if (!price && price !== 0) return "N/A";
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(price);
   };
 
   // Function to get status badge color
   const getStatusBadge = (status) => {
     if (!status) return "bg-gray-200 text-gray-700";
-    
+
     switch (status) {
       case "Đang chiếu":
         return "bg-green-100 text-green-800";
@@ -84,29 +88,33 @@ const TabelShowTime = ({
   const getMovieTitle = (showTime) => {
     // First try the display-ready title field
     if (showTime.title) return showTime.title;
-    
+
     // Then try the nested Movie object if it exists
     if (showTime.Movie && showTime.Movie.title) return showTime.Movie.title;
-    
+
     // Finally fall back to movie_id
-    return `ID: ${showTime.movie_id || 'Unknown'}`;
+    return `ID: ${showTime.movie_id || "Unknown"}`;
   };
-  
+
   // Safely access cinema and room information
   const getCinemaRoom = (showTime) => {
     // First try display-ready fields
     if (showTime.cinema && showTime.room) {
       return `${showTime.cinema} - ${showTime.room}`;
     }
-    
+
     // Then try nested objects
     if (showTime.Room) {
-      const cinemaName = showTime.Room.Cinema ? showTime.Room.Cinema.name : 'Unknown Cinema';
-      return `${cinemaName} - ${showTime.Room.name || `Room #${showTime.room_id}`}`;
+      const cinemaName = showTime.Room.Cinema
+        ? showTime.Room.Cinema.name
+        : "Unknown Cinema";
+      return `${cinemaName} - ${
+        showTime.Room.name || `Room #${showTime.room_id}`
+      }`;
     }
-    
+
     // Fall back to room_id
-    return `Phòng: ${showTime.room_id || 'Unknown'}`;
+    return `Phòng: ${showTime.room_id || "Unknown"}`;
   };
 
   return (
@@ -126,7 +134,7 @@ const TabelShowTime = ({
               <th className="py-2 px-2">Ngày chiếu</th>
               <th className="py-2 px-2">Giờ bắt đầu</th>
               <th className="py-2 px-2">Kết thúc</th>
-              <th className="py-2 px-2">Trạng thái</th>
+              {/* <th className="py-2 px-2">Trạng thái</th> */}
               <th className="py-2 px-2">Thao tác</th>
             </tr>
           </thead>
@@ -143,14 +151,16 @@ const TabelShowTime = ({
                 <td className="py-3 px-2">
                   {showTime.time || formatTime(showTime.startTime)}
                 </td>
-                <td className="py-3 px-2">
-                  {formatTime(showTime.endTime)}
-                </td>
-                <td className="py-3 px-2">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(showTime.status)}`}>
+                <td className="py-3 px-2">{formatTime(showTime.endTime)}</td>
+                {/* <td className="py-3 px-2">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(
+                      showTime.status
+                    )}`}
+                  >
                     {showTime.status || "N/A"}
                   </span>
-                </td>
+                </td> */}
                 <td className="py-3 px-2">
                   <span className="flex gap-2">
                     <span

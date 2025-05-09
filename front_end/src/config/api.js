@@ -7,6 +7,7 @@
 export const API_BASE_URL = "http://localhost:3000";
 
 // API endpoints
+// Sửa lại các endpoint
 export const API_ENDPOINTS = {
   // Authentication
   LOGIN: `${API_BASE_URL}/auth/login`,
@@ -29,15 +30,22 @@ export const API_ENDPOINTS = {
   
   // Products
   PRODUCTS: `${API_BASE_URL}/product`,
-  PRODUCT_DETAILS: (id) => `${API_BASE_URL}/product/${id}`,
+  PRODUCT_ADD: `${API_BASE_URL}/product/add`,
+  PRODUCT_EDIT: (id) => `${API_BASE_URL}/product/edit/${id}`,
+  PRODUCT_DETAILS: (id) => `${API_BASE_URL}/product/detail/${id}`,
+  PRODUCT_DELETE: (id) => `${API_BASE_URL}/product/delete/${id}`,
   
   // Promotions
   PROMOTIONS: `${API_BASE_URL}/discount`,
-  PROMOTION_DETAILS: (id) => `${API_BASE_URL}/discount/${id}`,
+  PROMOTION_DETAILS: (id) => `${API_BASE_URL}/discount/detail/${id}`,
+  PROMOTION_ADD: `${API_BASE_URL}/discount/add`,
+  PROMOTION_EDIT: (id) => `${API_BASE_URL}/discount/edit/${id}`,
+  PROMOTION_DELETE: (id) => `${API_BASE_URL}/discount/delete/${id}`,
   
-  // Orders
-  ORDERS: `${API_BASE_URL}/order`,
-  ORDER_DETAILS: (id) => `${API_BASE_URL}/order/${id}`,
+  // Orders/Invoices
+  ORDERS: `${API_BASE_URL}/invoice`,
+  ORDER_DETAILS: (id) => `${API_BASE_URL}/invoice/detail/${id}`,
+  ORDER_PAYMENT: (id) => `${API_BASE_URL}/invoice/payment/${id}`,
 };
 
 // API request timeout (in milliseconds)
@@ -58,4 +66,4 @@ export const buildRequestOptions = (method = 'GET', body = null, headers = {}) =
     },
     ...(body && { body: JSON.stringify(body) }),
   };
-}; 
+};

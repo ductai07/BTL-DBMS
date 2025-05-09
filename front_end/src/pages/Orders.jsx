@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+// Sửa dòng import để thêm useRef
+import { useState, useEffect, useRef } from "react";
 import Header from "../component/Header";
 import Search from "../component/Search";
 import { FaPlus } from "react-icons/fa";
@@ -7,6 +8,7 @@ import AddOrderModal from "../component/AddOrderModal";
 import OrderDetailsModal from "../component/OrderDetailsModal";
 import Select from "../component/Select";
 import { formatCurrency } from "../utils/formatUtils";
+import { API_ENDPOINTS } from "../config/api";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -27,19 +29,31 @@ const Orders = () => {
   });
 
   // Fetch orders from the database
+  // Thêm state để lưu trữ các tham số tìm kiếm
+  const queryRef = useRef({});
+  
+  // Thêm hàm xử lý khi thay đổi trạng thái
+  const handleStatusChange = (status) => {
+    setStatusFilter(status);
+    // Đặt lại trang về 1 khi thay đổi bộ lọc
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    // Gọi fetchOrders ngay lập tức
+    setTimeout(() => fetchOrders(), 0);
+  };
+  
+  // Trong hàm fetchOrders, sửa phần tìm kiếm
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      let url = `http://localhost:3000/invoice?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
+      let url = `${API_ENDPOINTS.ORDERS}?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
       
-      // Add status filter if applicable
-      if (statusFilter !== "all") {
-        url += `&status=${encodeURIComponent(statusFilter)}`;
+      // Sử dụng queryRef để lấy các tham số tìm kiếm
+      if (queryRef.current.status && queryRef.current.status !== "all") {
+        url += `&status=${encodeURIComponent(queryRef.current.status)}`;
       }
       
-      // Add search term if applicable
-      if (searchTerm) {
-        url += `&SearchKey=note&SearchValue=${encodeURIComponent(searchTerm)}`;
+      if (queryRef.current.SearchKey && queryRef.current.SearchValue) {
+        url += `&SearchKey=${encodeURIComponent(queryRef.current.SearchKey)}&SearchValue=${encodeURIComponent(queryRef.current.SearchValue)}`;
       }
       
       console.log("Fetching orders from:", url);
@@ -48,6 +62,10 @@ const Orders = () => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
+      // Xóa dòng này vì đã khai báo data ở dưới
+      // const data = await response.json();
+      // console.log("Search response:", data);
       
       const data = await response.json();
       console.log("Received orders data:", data);
@@ -86,7 +104,7 @@ const Orders = () => {
   // Load initial data
   useEffect(() => {
     fetchOrders();
-  }, [pagination.currentPage, statusFilter, searchTerm]);
+  }, [pagination.currentPage, searchTerm]); // Loại bỏ statusFilter khỏi dependencies
 
   // Format date function (YYYY-MM-DD to DD/MM/YYYY)
   const formatDate = (dateString) => {
@@ -220,38 +238,54 @@ const Orders = () => {
     }
   };
 
-  // Status options
-  const statusOptions = [
-    { key: "all", value: "Tất cả trạng thái" },
-    { key: "Chưa thanh toán", value: "Chưa thanh toán" },
-    { key: "Đã thanh toán", value: "Đã thanh toán" },
-    { key: "Đã hủy", value: "Đã hủy" }
-  ];
+  // Status options - Chuyển sang định dạng cũ (key/value)
+// Trong component Orders
 
-  return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <Header title="Quản lý đơn hàng" />
-      
-      {/* Controls */}
-      <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Search 
-            placeholder="Tìm kiếm theo khách hàng..." 
-            setSearch={setSearchTerm}
-            search={searchTerm}
-          />
-          
-          <Select 
-            options={statusOptions}
-            value={statusFilter}
-            onChange={setStatusFilter}
-          />
-          
+// Đã có định dạng đúng cho statusOptions
+const statusOptions = [
+  { key: "all", value: "Tất cả trạng thái" },
+  { key: "Chưa thanh toán", value: "Chưa thanh toán" },
+  { key: "Đã thanh toán", value: "Đã thanh toán" },
+  { key: "Đã hủy", value: "Đã hủy" }
+];
+
+// Xóa đoạn JSX <Select> ở đây
+
+return (
+  <div className="p-6 bg-gray-100 min-h-screen">
+    <Header title="Quản lý đơn hàng" />
+    
+    {/* Controls */}
+    <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Search 
+          placeholder="Tìm kiếm theo tên khách hàng..." 
+          setSearch={setSearchTerm}
+          search={searchTerm}
+          queryRef={queryRef}
+          keySearch="$Customer.fullName$" 
+        />
+        
+        <Select 
+          options={statusOptions}
+          value={statusFilter}
+          onChange={handleStatusChange}
+          keySearch="status"
+          queryRef={queryRef}
+        />
+        
           <button
             onClick={() => {
+              // Đặt lại các state
               setSearchTerm("");
               setStatusFilter("all");
               setPagination(prev => ({ ...prev, currentPage: 1 }));
+              
+              // Đặt lại queryRef
+              queryRef.current = {};
+              
+              // Gọi fetchOrders ngay lập tức
+              setTimeout(() => fetchOrders(), 0);
             }}
             className="px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-md border border-blue-600"
           >

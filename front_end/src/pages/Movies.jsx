@@ -1,5 +1,5 @@
 import Header from "../component/Header";
-import Select from "../component/Select";
+import Select2 from "../component/Select2";
 import { FaPlus } from "react-icons/fa";
 import TableMovie from "../component/TableMovie";
 import { useState, useRef, useEffect } from "react";
@@ -239,7 +239,7 @@ const Movies = () => {
               </div>
               <div>
                 <div className="font-medium pb-2">Thể loại</div>
-                <Select
+                <Select2
                   options={Genres}
                   defaultValue={defaultGenres}
                   setDefault={setDefaultGenres}
@@ -250,7 +250,7 @@ const Movies = () => {
               </div>
               <div>
                 <div className="font-medium pb-2">Trạng thái</div>
-                <Select
+                <Select2
                   options={filmStatuses}
                   defaultValue={defaultFilmStatus}
                   setDefault={setDefaultFilmStatus}

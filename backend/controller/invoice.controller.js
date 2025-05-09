@@ -4,19 +4,20 @@ const sequelize = require('../config/database');
 
 // Lấy danh sách hóa đơn
 module.exports.index = async (req, res) => {
+    // Trong hàm index của controller
     try {
         // Lấy các tham số từ query
-        const { SearchKey, SearchValue, SortKey, SortValue, Page, Limit } = req.query;
-
+        const { SearchKey, SearchValue, SortKey, SortValue, Page, Limit, status } = req.query;
+    
         // Khởi tạo các biến mặc định
         let where = {};
-        let order = [];
-        let page = Page ? parseInt(Page) : 1;
-        let limit = Limit ? parseInt(Limit) : 10;
-        let offset = (page - 1) * limit;
-
-      
-
+        let order = [['createDate', 'DESC']]; // Thêm khai báo biến order
+    
+        // Xử lý filter theo status
+        if (status) {
+            where.status = status; // Tìm kiếm chính xác
+        }
+    
         // Xử lý tìm kiếm
         if (SearchKey && SearchValue) {
             where = {
@@ -26,20 +27,30 @@ module.exports.index = async (req, res) => {
                 }
             };
         }
-
+    
         // Xử lý sắp xếp
         if (SortKey && SortValue) {
             order = [[SortKey, SortValue.toUpperCase()]];
+        }
+    
+        // Xử lý sắp xếp
+        if (SortKey && SortValue) {
+            order = [[SortKey, SortValue.toUpperCase()]]; // Lỗi: order chưa được khai báo
         } else {
             order = [['createDate', 'DESC']]; // Mặc định là thời gian tạo giảm dần
         }
+
+        // Xử lý phan trang
+        const page = parseInt(Page) || 1;
+        const limit = parseInt(Limit) || 10;
+        const offset = (page - 1) * limit;
 
         // Thực hiện truy vấn
         const { count, rows } = await Model.Invoice.findAndCountAll({
             where,
             order,
-            limit,
-            offset,
+            limit,  // Biến chưa được khởi tạo
+            offset, // Biến chưa được khởi tạo
             include: [
                 {
                     model: Model.Customer,
@@ -58,7 +69,7 @@ module.exports.index = async (req, res) => {
 
         // Tính toán thông tin phân trang
         const totalPages = Math.ceil(count / limit);
-        const hasNext = page < totalPages;
+        const hasNext = page < totalPages; // Biến page chưa được khởi tạo
         const hasPrevious = page > 1;
 
         res.status(200).json({
@@ -171,58 +182,8 @@ module.exports.detail = async (req, res) => {
 // Tạo hóa đơn mới
 module.exports.create = async (req, res) => {
     try {
-        const { customer_id, employee_id, discount_id, note } = req.body;
-        
-        // Kiểm tra nhân viên
-        if (employee_id) {
-            const employee = await Model.Employee.findByPk(employee_id);
-            if (!employee) {
-                return res.status(400).json({
-                    message: 'Nhân viên không tồn tại'
-                });
-            }
-        }
-        
-        // Kiểm tra khách hàng
-        if (customer_id) {
-            const customer = await Model.Customer.findByPk(customer_id);
-            if (!customer) {
-                return res.status(400).json({
-                    message: 'Khách hàng không tồn tại'
-                });
-            }
-        }
-        
-        // Kiểm tra mã giảm giá
-        if (discount_id) {
-            const discount = await Model.Discount.findByPk(discount_id);
-            if (!discount) {
-                return res.status(400).json({
-                    message: 'Mã giảm giá không tồn tại'
-                });
-            }
-            
-            // Kiểm tra số lượng mã giảm giá còn lại
-            if (discount.quantity <= 0) {
-                return res.status(400).json({
-                    message: 'Mã giảm giá đã hết lượt sử dụng'
-                });
-            }
-            
-            // Kiểm tra thời hạn mã giảm giá
-            const currentDate = new Date();
-            if (discount.startDate > currentDate) {
-                return res.status(400).json({
-                    message: 'Mã giảm giá chưa bắt đầu'
-                });
-            }
-            
-            if (discount.endDate < currentDate) {
-                return res.status(400).json({
-                    message: 'Mã giảm giá đã hết hạn'
-                });
-            }
-        }
+        // Trong hàm create, sửa phần raw query
+        const { customer_id, employee_id, discount_id, note, status } = req.body;
         
         // Sửa đoạn raw query để tạo hóa đơn
         const result = await sequelize.query(`
@@ -238,7 +199,7 @@ module.exports.create = async (req, res) => {
             )
             VALUES (
                 GETDATE(), 
-                N'Chưa thanh toán', 
+                N'${status || 'Chưa thanh toán'}', 
                 ${customer_id || null}, 
                 ${employee_id || null}, 
                 ${discount_id || null},
@@ -718,7 +679,7 @@ module.exports.payment = async (req, res) => {
             WHERE id = ${id}
         `, { type: sequelize.QueryTypes.UPDATE });
         
-        // Lấy thông tin hóa đơn đã thanh toán
+        // Lấy thông tin hóa Đơn đã thanh toán
         const updatedInvoice = await Model.Invoice.findByPk(id, {
             include: [
                 {
@@ -746,4 +707,59 @@ module.exports.payment = async (req, res) => {
             error: error.message
         });
     }
-}; 
+};
+
+// Xóa hóa đơn
+// Xóa hóa đơn
+// Xóa hóa đơn
+module.exports.delete = async (req, res) => {
+    try {
+        const id = req.params.id;
+        
+        // Kiểm tra hóa đơn tồn tại
+        const invoice = await Model.Invoice.findByPk(id);
+        if (!invoice) {
+            return res.status(404).json({
+                message: 'Hóa đơn không tồn tại'
+            });
+        }
+        
+        // Xóa các sản phẩm trong hóa đơn (nếu có)
+        await sequelize.query(`
+            -- Cập nhật lại số lượng sản phẩm trong kho
+            UPDATE Product
+            SET quantity = quantity + PU.quantity
+            FROM Product P
+            INNER JOIN ProductUsage PU ON P.id = PU.product_id
+            WHERE PU.invoice_id = ${id};
+            
+            -- Xóa sản phẩm khỏi hóa đơn
+            DELETE FROM ProductUsage WHERE invoice_id = ${id};
+        `, { type: sequelize.QueryTypes.RAW });
+        
+        // Xóa các vé trong hóa đơn (nếu có)
+        await sequelize.query(`
+            -- Cập nhật lại trạng thái ghế
+            UPDATE Seat
+            SET status = N'Trống'
+            FROM Seat S
+            INNER JOIN Ticket T ON S.id = T.seat_id
+            WHERE T.invoice_id = ${id};
+            
+            -- Xóa vé khỏi hóa đơn
+            DELETE FROM Ticket WHERE invoice_id = ${id};
+        `, { type: sequelize.QueryTypes.RAW });
+        
+        // Xóa hóa đơn
+        await Model.Invoice.destroy({ where: { id } });
+        
+        res.status(200).json({
+            message: 'Xóa hóa đơn thành công'
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Lỗi khi xóa hóa đơn',
+            error: error.message
+        });
+    }
+};

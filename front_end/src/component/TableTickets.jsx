@@ -64,15 +64,16 @@ const TableTickets = ({
             <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Phim</th>
             <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Phòng/Ghế</th>
             <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Ngày chiếu</th>
+            <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Giờ chiếu</th>
             <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Giá vé</th>
-            <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+            {/* <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th> */}
             <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
           {!Array.isArray(tickets) || tickets.length === 0 ? (
             <tr>
-              <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+              <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                 Không có dữ liệu vé
               </td>
             </tr>
@@ -89,16 +90,19 @@ const TableTickets = ({
                   {ticket.roomName} / {ticket.seatPosition}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {formatDate(ticket.showDate)} {ticket.showTime}
+                  {formatDate(ticket.showDate)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {ticket.showTime || "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {formatCurrency(ticket.price)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                {/* <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
                     {getStatusText(ticket.status)}
                   </span>
-                </td>
+                </td> */}
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
                   {/* View details button */}
                   <button

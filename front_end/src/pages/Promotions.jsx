@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import TablePromotions from "../component/TablePromotions";
 import AddPromotionModal from "../component/AddPromotionModal";
 import { formatCurrency } from "../utils/formatUtils";
+import { API_ENDPOINTS } from "../config/api";
 
 const Promotions = () => {
   // State for promotions data
@@ -22,8 +23,8 @@ const Promotions = () => {
   const fetchPromotions = async () => {
     setLoading(true);
     try {
-      // Build URL with filters
-      let url = `http://localhost:3000/discount?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
+      // Use API_ENDPOINTS for consistency
+      let url = `${API_ENDPOINTS.PROMOTIONS}?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
       
       // Add filters if selected
       if (defaultStatus !== promotionStatuses[0].value) {
@@ -61,50 +62,26 @@ const Promotions = () => {
         throw new Error("Invalid data format received from server");
       }
       
-      // Format data for our component
-      const formattedPromotions = responseData.data.map(discount => {
-        // Ensure we have valid data objects
-        const discountData = discount || {};
-        
-        // Normalize discount value based on what field the API returned
-        const discountValue = parseFloat(discountData.discountValue || discountData.value || 0);
-        
-        // Determine discount type (percentage or fixed)
-        let discountType = "Percentage";
-        if (discountData.discountType === "fixed" || discountData.type === "fixed") {
-          discountType = "Fixed Amount";
-        }
-        
-        // Get discount name from either name or title field
-        const discountName = discountData.name || discountData.title || `Discount #${discountData.id}`;
-        
-        // Get code from proper field
-        const discountCode = discountData.code || discountData.promotionCode || `PROMO${discountData.id}`;
-        
-        // Parse dates
-        const startDate = discountData.startDate || discountData.startTime || new Date().toISOString().split('T')[0];
-        const endDate = discountData.endDate || discountData.endTime || new Date().toISOString().split('T')[0];
-        
-        return {
-          id: discountData.id,
-          code: discountCode,
-          name: discountName,
-          type: discountType,
-          value: discountValue,
-          minPurchase: parseFloat(discountData.minPurchase || 0),
-          maxDiscount: parseFloat(discountData.maxDiscount || 0),
-          startDate: startDate,
-          endDate: endDate,
-          status: discountData.status || determineStatus(startDate, endDate),
-          usageCount: discountData.usageCount || 0,
-          applyTo: discountData.applyTo || "All",
-          description: discountData.description || ""
-        };
-      });
+      // Format data consistently
+      const formattedPromotions = responseData.data.map(discount => ({
+        id: discount.id,
+        code: discount.code || discount.promotionCode || `PROMO${discount.id}`,
+        name: discount.name || discount.title || `Discount #${discount.id}`,
+        type: discount.discountType === "fixed" || discount.type === "fixed" ? "Fixed Amount" : "Percentage",
+        value: parseFloat(discount.discountValue || discount.value || 0),
+        minPurchase: parseFloat(discount.minPurchase || 0),
+        maxDiscount: parseFloat(discount.maxDiscount || 0),
+        startDate: discount.startDate || discount.startTime || new Date().toISOString().split('T')[0],
+        endDate: discount.endDate || discount.endTime || new Date().toISOString().split('T')[0],
+        status: discount.status || determineStatus(discount.startDate || discount.startTime, discount.endDate || discount.endTime),
+        usageCount: discount.usageCount || 0,
+        applyTo: discount.applyTo || "All",
+        description: discount.description || ""
+      }));
       
       console.log("Formatted promotions:", formattedPromotions);
       setData(formattedPromotions);
-      setPromotions(formattedPromotions); // Set immediately instead of filtering
+      setPromotions(formattedPromotions);
       setPagination({
         currentPage: responseData.pagination?.currentPage || 1,
         totalPages: responseData.pagination?.totalPages || 1,
@@ -112,47 +89,12 @@ const Promotions = () => {
         total: responseData.pagination?.total || 0
       });
       
-      // Then apply filters
-      filterPromotions(formattedPromotions);
       setError(null);
     } catch (err) {
       console.error("Error fetching promotions:", err);
       setError("Không thể tải dữ liệu khuyến mãi. Vui lòng thử lại sau.");
-      
-      // Try fallback API for active promotions
-      try {
-        console.log("Attempting to fetch active promotions as fallback...");
-        const fallbackUrl = "http://localhost:3000/discount/active";
-        const fallbackResponse = await fetch(fallbackUrl);
-        
-        if (fallbackResponse.ok) {
-          const fallbackData = await fallbackResponse.json();
-          
-          if (fallbackData && Array.isArray(fallbackData.data)) {
-            const simplePromotions = fallbackData.data.map(promo => ({
-              id: promo.id,
-              code: promo.code || promo.promotionCode || `PROMO${promo.id}`,
-              name: promo.name || promo.title || `Promotion #${promo.id}`,
-              type: promo.discountType === "fixed" ? "Fixed Amount" : "Percentage",
-              value: parseFloat(promo.discountValue || promo.value || 0),
-              minPurchase: parseFloat(promo.minPurchase || 0),
-              maxDiscount: parseFloat(promo.maxDiscount || 0),
-              startDate: promo.startDate || promo.startTime || new Date().toISOString().split('T')[0],
-              endDate: promo.endDate || promo.endTime || new Date().toISOString().split('T')[0],
-              status: "Active",
-              usageCount: promo.usageCount || 0,
-              applyTo: promo.applyTo || "All",
-              description: promo.description || ""
-            }));
-            
-            setData(simplePromotions);
-            setPromotions(simplePromotions);
-            setError("Chỉ hiển thị khuyến mãi đang hoạt động do lỗi tải dữ liệu đầy đủ.");
-          }
-        }
-      } catch (fallbackErr) {
-        console.error("Fallback fetch also failed:", fallbackErr);
-      }
+      setData([]);
+      setPromotions([]);
     } finally {
       setLoading(false);
     }
@@ -179,7 +121,7 @@ const Promotions = () => {
     
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3000/discount/delete/${id}`, {
+      const response = await fetch(API_ENDPOINTS.PROMOTION_DELETE(id), {
         method: "DELETE"
       });
       
@@ -220,7 +162,7 @@ const Promotions = () => {
       
       if (newPromotion.id) {
         // Edit existing promotion
-        response = await fetch(`http://localhost:3000/discount/edit/${newPromotion.id}`, {
+        response = await fetch(API_ENDPOINTS.PROMOTION_EDIT(newPromotion.id), {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json"
@@ -229,7 +171,7 @@ const Promotions = () => {
         });
       } else {
         // Add new promotion
-        response = await fetch("http://localhost:3000/discount/add", {
+        response = await fetch(API_ENDPOINTS.PROMOTION_ADD, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"

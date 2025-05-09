@@ -15,7 +15,7 @@ const Showtime = () => {
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
-    pageSize: 10,
+    pageSize: 5,
     total: 0,
   });
 
@@ -49,21 +49,32 @@ const Showtime = () => {
     try {
       // Build URL with filters
       let url = `http://localhost:3000/showtime?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
-      
-      if (movieFilter !== "all") {
-        url += `&movie_id=${movieFilter}`;
+
+      if (queryRef.current.movieId !== "all") {
+        url += `&movie_id=${queryRef.current.movieId}`;
+      } else {
+        url += `&movie_id=${""}`;
       }
-      
-      if (cinemaFilter !== "all") {
-        url += `&cinema_id=${cinemaFilter}`;
+
+      if (queryRef.current.cinemaId !== "all") {
+        url += `&cinema_id=${queryRef.current.cinemaId}`;
+      } else {
+        url += `&cinema_id=${""}`;
       }
-      
+
       if (dateFilter !== "all") {
         url += `&date=${dateFilter}`;
+      } else {
+        url += `&date=${""}`;
       }
-      
+      if (queryRef.current.SearchKey !== "all") {
+        url += `&SearchKey=${queryRef.current.SearchKey}`;
+        url += `&SearchValue=${queryRef.current.SearchValue}`;
+      } else {
+        url += `&${queryRef.current.SearchKey}=${""}`;
+      }
       console.log("Fetching showtimes from:", url);
-      
+
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -72,12 +83,12 @@ const Showtime = () => {
 
       const data = await response.json();
       console.log("Showtime data received:", data);
-      
+
       if (!data || !Array.isArray(data.data)) {
         console.error("Invalid showtime data format:", data);
         throw new Error("Invalid data format received from server");
       }
-      
+
       // Use the data as received from the backend
       setShowtimes(data.data);
       setFilteredShowtimes(data.data);
@@ -87,25 +98,25 @@ const Showtime = () => {
         pageSize: pagination.pageSize,
         total: data.pagination?.total || 0,
       });
-      
+
       setError(null);
     } catch (err) {
       console.error("Error fetching showtimes:", err);
       setError("Không thể tải dữ liệu lịch chiếu. Vui lòng thử lại sau.");
-      
+
       // Fallback to simple API if main API fails
       try {
         console.log("Attempting fallback to simple API...");
         const simpleUrl = `http://localhost:3000/showtime/simple?Page=${pagination.currentPage}&Limit=${pagination.pageSize}`;
         const simpleResponse = await fetch(simpleUrl);
-        
+
         if (!simpleResponse.ok) {
           throw new Error(`HTTP error! status: ${simpleResponse.status}`);
         }
-        
+
         const simpleData = await simpleResponse.json();
         console.log("Simple API data received:", simpleData);
-        
+
         if (simpleData && Array.isArray(simpleData.data)) {
           setShowtimes(simpleData.data);
           setFilteredShowtimes(simpleData.data);
@@ -115,7 +126,7 @@ const Showtime = () => {
             pageSize: pagination.pageSize,
             total: simpleData.pagination?.total || 0,
           });
-          
+
           // Update error message to indicate we're using fallback data
           setError("Sử dụng dữ liệu đơn giản do lỗi khi tải dữ liệu đầy đủ.");
         } else {
@@ -174,7 +185,9 @@ const Showtime = () => {
 
       // Load showtime dates
       try {
-        const datesResponse = await fetch("http://localhost:3000/showtime/dates");
+        const datesResponse = await fetch(
+          "http://localhost:3000/showtime/dates"
+        );
         if (datesResponse.ok) {
           const datesData = await datesResponse.json();
           if (datesData && Array.isArray(datesData.data)) {
@@ -341,8 +354,8 @@ const Showtime = () => {
             room_id: showtimeData.roomId,
             showDate: showtimeData.showDate,
             startTime: showtimeData.startTime,
-            price: showtimeData.price,
-            status: showtimeData.status,
+            endTime: showtimeData.startTime,
+            // status: showtimeData.status,
           }),
         });
       }
@@ -514,6 +527,17 @@ const Showtime = () => {
       </div>
     );
   };
+  const queryRef = useRef({
+    SearchKey: "",
+    SearchValue: "",
+    SortKey: "",
+    SortValue: "",
+    Page: "",
+    Limit: 10,
+    cinemaId: "",
+    movieId: "",
+    type: "",
+  });
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -528,6 +552,10 @@ const Showtime = () => {
               <Select
                 options={movieOptions}
                 value={movieFilter}
+                defaultValue={movieFilter}
+                setDefault={setMovieFilter}
+                keySearch={"movieId"}
+                queryRef={queryRef}
                 onChange={(value) => handleFilterChange("movie", value)}
               />
             </div>
@@ -537,6 +565,10 @@ const Showtime = () => {
               <Select
                 options={cinemaOptions}
                 value={cinemaFilter}
+                keySearch={"cinemaId"}
+                defaultValue={cinemaFilter}
+                setDefault={setCinemaFilter}
+                queryRef={queryRef}
                 onChange={(value) => handleFilterChange("cinema", value)}
               />
             </div>
@@ -550,14 +582,18 @@ const Showtime = () => {
               />
             </div>
 
-            <div>
+            {/* <div>
               <div className="font-medium mb-2">Trạng thái</div>
               <Select
                 options={statusOptions}
                 value={statusFilter}
+                setDefault={setStatusFilter}
+                defaultValue={statusFilter}
+                keySearch={"status"}
+                queryRef={queryRef}
                 onChange={(value) => handleFilterChange("status", value)}
               />
-            </div>
+            </div> */}
           </div>
 
           <button
@@ -610,23 +646,29 @@ const Showtime = () => {
             changeEntry={changeEntry}
             handleDelete={handleDelete}
           />
-          
+
           {/* Pagination */}
           {pagination.totalPages > 1 && (
             <div className="flex justify-center mt-6">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handlePageChange(Math.max(1, pagination.currentPage - 1))}
+                  onClick={() =>
+                    handlePageChange(Math.max(1, pagination.currentPage - 1))
+                  }
                   disabled={pagination.currentPage === 1}
-                  className={`px-3 py-1 rounded ${pagination.currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                  className={`px-3 py-1 rounded ${
+                    pagination.currentPage === 1
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                  }`}
                 >
                   Trước
                 </button>
-                
+
                 <div className="flex items-center gap-1">
                   {(() => {
                     const pages = [];
-                    
+
                     // Always show first page
                     if (pagination.totalPages > 0) {
                       pages.push(
@@ -635,22 +677,30 @@ const Showtime = () => {
                           onClick={() => handlePageChange(1)}
                           className={`w-8 h-8 flex items-center justify-center rounded ${
                             pagination.currentPage === 1
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                           }`}
                         >
                           1
                         </button>
                       );
                     }
-                    
+
                     // Add ellipsis if needed
                     if (pagination.currentPage > 3) {
                       pages.push(<span key="ellipsis1">...</span>);
                     }
-                    
+
                     // Add pages around current page
-                    for (let i = Math.max(2, pagination.currentPage - 1); i <= Math.min(pagination.totalPages - 1, pagination.currentPage + 1); i++) {
+                    for (
+                      let i = Math.max(2, pagination.currentPage - 1);
+                      i <=
+                      Math.min(
+                        pagination.totalPages - 1,
+                        pagination.currentPage + 1
+                      );
+                      i++
+                    ) {
                       if (i > 1 && i < pagination.totalPages) {
                         pages.push(
                           <button
@@ -658,8 +708,8 @@ const Showtime = () => {
                             onClick={() => handlePageChange(i)}
                             className={`w-8 h-8 flex items-center justify-center rounded ${
                               pagination.currentPage === i
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                             }`}
                           >
                             {i}
@@ -667,37 +717,50 @@ const Showtime = () => {
                         );
                       }
                     }
-                    
+
                     // Add ellipsis if needed
                     if (pagination.currentPage < pagination.totalPages - 2) {
                       pages.push(<span key="ellipsis2">...</span>);
                     }
-                    
+
                     // Always show last page if there are multiple pages
                     if (pagination.totalPages > 1) {
                       pages.push(
                         <button
                           key={pagination.totalPages}
-                          onClick={() => handlePageChange(pagination.totalPages)}
+                          onClick={() =>
+                            handlePageChange(pagination.totalPages)
+                          }
                           className={`w-8 h-8 flex items-center justify-center rounded ${
                             pagination.currentPage === pagination.totalPages
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                           }`}
                         >
                           {pagination.totalPages}
                         </button>
                       );
                     }
-                    
+
                     return pages;
                   })()}
                 </div>
-                
+
                 <button
-                  onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.currentPage + 1))}
+                  onClick={() =>
+                    handlePageChange(
+                      Math.min(
+                        pagination.totalPages,
+                        pagination.currentPage + 1
+                      )
+                    )
+                  }
                   disabled={pagination.currentPage === pagination.totalPages}
-                  className={`px-3 py-1 rounded ${pagination.currentPage === pagination.totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                  className={`px-3 py-1 rounded ${
+                    pagination.currentPage === pagination.totalPages
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                  }`}
                 >
                   Tiếp
                 </button>

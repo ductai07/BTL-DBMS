@@ -90,13 +90,14 @@ const TableOrders = ({ orders, onOpenDetails, onUpdateStatus, onDelete }) => {
                     </select>
                   )}
                   
-                  <button
+                  {/* <button
                     onClick={() => onDelete(order.id)}
-                    className="text-red-600 hover:text-red-900"
-                    title="Xóa đơn hàng"
+                    className={`text-red-600 hover:text-red-900 ${order.status === 'Đã thanh toán' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={order.status === 'Đã thanh toán' ? 'Không thể xóa đơn hàng đã thanh toán' : 'Xóa đơn hàng'}
+                    disabled={order.status === 'Đã thanh toán'}
                   >
                     <FaTrash />
-                  </button>
+                  </button> */}
                 </div>
               </td>
             </tr>
