@@ -254,7 +254,7 @@ module.exports.add = async (req, res) => {
             startDate,
             endDate
         } = req.body;
-
+        console.log('discountValue-BE:', discountValue);
         // Kiểm tra loại giảm giá hợp lệ
         if (type && type !== 'Fixed'.toLowerCase() && type !== 'Percentage'.toLowerCase()) {
             return res.status(400).json({
@@ -263,13 +263,13 @@ module.exports.add = async (req, res) => {
         }
 
         // Kiểm tra giá trị khuyến mãi hợp lệ
-        if (type === 'Percentage' && (discountValue < 0 || discountValue > 100)) {
+        if (type === 'Percentage'.toLowerCase() && (discountValue < 0 || discountValue > 100)) {
             return res.status(400).json({
                 message: 'Percentage discount must be between 0 and 100'
             });
         }
 
-        if (type === 'Fixed' && discountValue < 0) {
+        if (type === 'Fixed'.toLowerCase() && discountValue < 0) {
             return res.status(400).json({
                 message: 'Fixed discount value cannot be negative'
             });
@@ -311,7 +311,7 @@ module.exports.add = async (req, res) => {
         });
 
         res.status(201).json({
-            message: 'Discount created successfully',
+            message: `Discount created successfully`,
             data: discount
         });
     } catch (error) {

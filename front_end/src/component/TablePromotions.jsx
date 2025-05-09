@@ -12,14 +12,14 @@ const TablePromotions = ({
   handleDelete,
 }) => {
   const promotionStatusColor = {
-    "Active": "bg-green-100 text-green-800",
-    "Scheduled": "bg-blue-100 text-blue-800",
-    "Expired": "bg-gray-100 text-gray-800",
-    "Disabled": "bg-red-100 text-red-800",
-    "upcoming": "bg-blue-100 text-blue-800", // API might return lowercase
-    "active": "bg-green-100 text-green-800",
-    "expired": "bg-gray-100 text-gray-800",
-    "unknown": "bg-gray-100 text-gray-500"
+    Active: "bg-green-100 text-green-800",
+    Scheduled: "bg-blue-100 text-blue-800",
+    Expired: "bg-gray-100 text-gray-800",
+    Disabled: "bg-red-100 text-red-800",
+    upcoming: "bg-blue-100 text-blue-800", // API might return lowercase
+    active: "bg-green-100 text-green-800",
+    expired: "bg-gray-100 text-gray-800",
+    unknown: "bg-gray-100 text-gray-500",
   };
 
   // Format date to readable format
@@ -41,7 +41,7 @@ const TablePromotions = ({
   // Format discount based on type
   const formatDiscount = (type, discountValue) => {
     if (discountValue === null || discountValue === undefined) return "N/A";
-    
+
     if (type === "Percentage" || type === "percentage" || type === "percent") {
       return `${discountValue}%`;
     } else {
@@ -52,33 +52,35 @@ const TablePromotions = ({
   // Get display status (capitalize if needed)
   const getDisplayStatus = (status) => {
     if (!status) return "Unknown";
-    
+
     // If it's already in our expected format
     if (promotionStatusColor[status]) {
       return status.charAt(0).toUpperCase() + status.slice(1);
     }
-    
+
     // Otherwise convert
-    switch(status.toLowerCase()) {
-      case "active": return "Active";
-      case "upcoming": 
-      case "scheduled": return "Scheduled";
-      case "expired": return "Expired";
-      case "disabled": return "Disabled";
-      default: return status;
+    switch (status.toLowerCase()) {
+      case "active":
+        return "Active";
+      case "upcoming":
+      case "scheduled":
+        return "Scheduled";
+      case "expired":
+        return "Expired";
+      case "disabled":
+        return "Disabled";
+      default:
+        return status;
     }
   };
-  console.log('pro:',promotions);
+  console.log("pro:", promotions);
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
       <table className="w-full table-auto">
         <thead>
           <tr className="text-sm font-medium text-gray-700 border-b border-gray-200 bg-gray-50">
             {columnNames.map((name, index) => (
-              <th
-                key={index}
-                className="px-4 py-4 text-center"
-              >
+              <th key={index} className="px-4 py-4 text-center">
                 {name}
               </th>
             ))}
@@ -92,17 +94,23 @@ const TablePromotions = ({
             >
               <td className="px-4 py-4 text-center">
                 <div className="flex items-center justify-center space-x-1">
-                  <span className="font-mono font-medium">PROMO{promotion.id}</span>
+                  <span className="font-mono font-medium">
+                    PROMO{promotion.id}
+                  </span>
                 </div>
               </td>
               <td className="px-4 py-4 text-left">
                 <div>
-                  <p className="font-medium text-gray-800">{promotion.name || "Untitled Promotion"}</p>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-1">{promotion.description || ""}</p>
+                  <p className="font-medium text-gray-800">
+                    {promotion.name || "Untitled Promotion"}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+                    {promotion.description || ""}
+                  </p>
                 </div>
               </td>
               <td className="px-4 py-4 text-center font-medium">
-                {formatDiscount(promotion.type, promotion.discountValue || promotion.value)}
+                {formatDiscount(promotion.type, promotion.discountValue)}
                 {promotion.quantity > 0 && (
                   <div className="text-xs text-gray-500 mt-1">
                     Remaining: {promotion.quantity}
@@ -118,7 +126,12 @@ const TablePromotions = ({
                 </span>
               </td>
               <td className="px-4 py-4 text-center">
-                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${promotionStatusColor[promotion.status] || 'bg-gray-100 text-gray-800'}`}>
+                <span
+                  className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                    promotionStatusColor[promotion.status] ||
+                    "bg-gray-100 text-gray-800"
+                  }`}
+                >
                   {getDisplayStatus(promotion.status)}
                 </span>
               </td>

@@ -75,10 +75,7 @@ const AddPromotionModal = ({
           info.quantity === "" || info.quantity === undefined
             ? null
             : parseInt(info.quantity),
-        discountValue:
-          info.discountValue === "" || info.discountValue === undefined
-            ? null
-            : parseFloat(info.discountValue),
+        discountValue: parseFloat(info.discountValue),
         startDate: info.startDate || new Date().toISOString().split("T")[0],
         endDate: info.endDate || null,
         // Keep id for frontend tracking
