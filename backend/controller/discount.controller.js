@@ -256,7 +256,7 @@ module.exports.add = async (req, res) => {
         } = req.body;
 
         // Kiểm tra loại giảm giá hợp lệ
-        if (type && type !== 'Fixed' && type !== 'Percentage') {
+        if (type && type !== 'Fixed'.toLowerCase() && type !== 'Percentage'.toLowerCase()) {
             return res.status(400).json({
                 message: 'Invalid discount type. Must be either "Fixed" or "Percentage"'
             });
@@ -345,7 +345,7 @@ module.exports.edit = async (req, res) => {
         }
 
         // Kiểm tra loại giảm giá hợp lệ
-        if (type && type !== 'Fixed' && type !== 'Percentage') {
+        if (type && type !== 'Fixed'.toLowerCase() && type !== 'Percentage'.toLowerCase()) {
             return res.status(400).json({
                 message: 'Invalid discount type. Must be either "Fixed" or "Percentage"'
             });

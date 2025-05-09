@@ -26,7 +26,7 @@ const AddPromotionModal = ({
         quantity: "", // Use empty string for inputs
         description: "",
         // Remove fields not in simplified model
-        id: Date.now(), // Keep for frontend tracking only
+        id: null, // Keep for frontend tracking only
       });
       setPreviewSample(100000);
     } else {
@@ -182,7 +182,7 @@ const AddPromotionModal = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
+                {/* <div>
                   <label className="block text-gray-700 text-sm font-medium mb-1">
                     Promotion Code
                   </label>
@@ -194,8 +194,8 @@ const AddPromotionModal = ({
                     placeholder="e.g. SUMMER25"
                     className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
-                </div>
-                <div>
+                </div> */}
+                {/* <div>
                   <label className="block text-gray-700 text-sm font-medium mb-1">
                     Apply To
                   </label>
@@ -209,7 +209,7 @@ const AddPromotionModal = ({
                     <option value="Tickets">Tickets Only</option>
                     <option value="Food">Food & Drinks Only</option>
                   </select>
-                </div>
+                </div> */}
               </div>
 
               <div className="mt-4">
@@ -237,10 +237,10 @@ const AddPromotionModal = ({
                 </label>
                 <select
                   name="type"
-                  value={info.type || ""}
+                  value={info.type || "Fixed Amount"}
                   onChange={handleChange}
                   className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  required
+                  // required
                 >
                   <option value="">Select Type</option>
                   <option value="Percentage">Percentage</option>
@@ -265,11 +265,11 @@ const AddPromotionModal = ({
                   className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
                   required
                   min="0"
-                  max={info.type === "Percentage" ? "100" : ""}
+                  // max={info.type === "Percentage" ? "100" : ""}
                 />
               </div>
 
-              <div className="mb-4">
+              {/* <div className="mb-4">
                 <label className="block text-gray-700 text-sm font-medium mb-1">
                   Minimum Purchase Amount (VND)
                 </label>
@@ -282,9 +282,9 @@ const AddPromotionModal = ({
                   className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
                   min="0"
                 />
-              </div>
+              </div> */}
 
-              {info.type === "Percentage" && (
+              {/* {info.type === "Percentage" && (
                 <div className="mb-4">
                   <label className="block text-gray-700 text-sm font-medium mb-1">
                     Maximum Discount Amount (VND)
@@ -299,7 +299,7 @@ const AddPromotionModal = ({
                     min="0"
                   />
                 </div>
-              )}
+              )} */}
             </div>
 
             <div>

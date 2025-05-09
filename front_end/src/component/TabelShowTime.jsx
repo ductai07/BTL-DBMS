@@ -133,7 +133,7 @@ const TabelShowTime = ({
               <th className="py-2 px-2">Rạp - Phòng</th>
               <th className="py-2 px-2">Ngày chiếu</th>
               <th className="py-2 px-2">Giờ bắt đầu</th>
-              <th className="py-2 px-2">Kết thúc</th>
+              {/* <th className="py-2 px-2">Kết thúc</th> */}
               {/* <th className="py-2 px-2">Trạng thái</th> */}
               <th className="py-2 px-2">Thao tác</th>
             </tr>
@@ -151,7 +151,7 @@ const TabelShowTime = ({
                 <td className="py-3 px-2">
                   {showTime.time || formatTime(showTime.startTime)}
                 </td>
-                <td className="py-3 px-2">{formatTime(showTime.endTime)}</td>
+                {/* <td className="py-3 px-2">{formatTime(showTime.endTime)}</td> */}
                 {/* <td className="py-3 px-2">
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(

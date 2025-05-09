@@ -24,7 +24,8 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
   const [ticketItem, setTicketItem] = useState({
     ticket_id: "",
     name: "",
-    price: 0
+    price: 0,
+    quantity: 1  // Added quantity field for tickets
   });
 
   // Reset form & fetch data when modal open/close
@@ -36,7 +37,7 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
       setPaymentMethod("");
       setStatus("Chưa thanh toán");
       setProductItem({ product_id: "", name: "", price: 0, quantity: 1 });
-      setTicketItem({ ticket_id: "", name: "", price: 0 });
+      setTicketItem({ ticket_id: "", name: "", price: 0, quantity: 1 });  // Reset with quantity
     } else {
       fetchProducts();
       fetchTickets();
@@ -105,10 +106,11 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
       setTicketItem({
         ticket_id: selectedTicket.id,
         name: `Vé phim: ${selectedTicket.movieTitle} - Ghế: ${selectedTicket.seatPosition}`,
-        price: selectedTicket.price
+        price: selectedTicket.price,
+        quantity: 1
       });
     } else {
-      setTicketItem({ ticket_id: "", name: "", price: 0 });
+      setTicketItem({ ticket_id: "", name: "", price: 0, quantity: 1 });
     }
   };
 
@@ -116,6 +118,14 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
     setProductItem({ 
       ...productItem, 
       quantity: parseInt(e.target.value) || 1 
+    });
+  };
+
+  // Add function to handle ticket quantity change
+  const handleTicketQuantityChange = (e) => {
+    setTicketItem({
+      ...ticketItem,
+      quantity: parseInt(e.target.value) || 1
     });
   };
 
@@ -170,7 +180,7 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
         ticket_id: selectedTicket.id,
         name: `Vé phim: ${selectedTicket.movieTitle} - Ghế: ${selectedTicket.seatPosition}`,
         price: selectedTicket.price,
-        quantity: 1 // vé chỉ 1
+        quantity: ticketItem.quantity  // Use the quantity from ticketItem
       };
 
       // Check for duplicates
@@ -187,7 +197,7 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
       }
 
       // Reset ticket selection
-      setTicketItem({ ticket_id: "", name: "", price: 0 });
+      setTicketItem({ ticket_id: "", name: "", price: 0, quantity: 1 });
     }
   };
 
@@ -237,10 +247,14 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
             body: JSON.stringify({ product_id: item.product_id, quantity: item.quantity })
           });
         } else if (item.ticket_id) {
+          // Modified to send quantity for tickets as well
           await fetch(`http://localhost:3000/invoice/${invoiceId}/ticket`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ticket_id: item.ticket_id })
+            body: JSON.stringify({ 
+              ticket_id: item.ticket_id,
+              quantity: item.quantity
+            })
           });
         }
       }
@@ -262,6 +276,7 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
       setLoading(false);
     }
   };
+  
   const formatTime = (timeString) => {
     if (!timeString) return "N/A";
   
@@ -337,13 +352,16 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
                 readOnly 
                 className="w-full bg-gray-100 border p-2 rounded text-sm mt-1" 
               />
-              <input 
-                type="number" 
-                min={1} 
-                value={productItem.quantity} 
-                onChange={handleProductQuantityChange} 
-                className="w-full border p-2 rounded text-sm mt-1" 
-              />
+              <div className="mt-1">
+                <label className="block text-sm font-medium">Số lượng</label>
+                <input 
+                  type="number" 
+                  min={1} 
+                  value={productItem.quantity} 
+                  onChange={handleProductQuantityChange} 
+                  className="w-full border p-2 rounded text-sm" 
+                />
+              </div>
               <button 
                 type="button" 
                 onClick={addProductItem} 
@@ -374,6 +392,16 @@ const AddOrderModal = ({ isOpen, onClose, onSave }) => {
                 readOnly 
                 className="w-full bg-gray-100 border p-2 rounded text-sm mt-1" 
               />
+              <div className="mt-1">
+                <label className="block text-sm font-medium">Số lượng</label>
+                <input 
+                  type="number" 
+                  min={1} 
+                  value={ticketItem.quantity} 
+                  onChange={handleTicketQuantityChange}
+                  className="w-full border p-2 rounded text-sm" 
+                />
+              </div>
               <button 
                 type="button" 
                 onClick={addTicketItem} 

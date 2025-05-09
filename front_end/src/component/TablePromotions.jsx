@@ -68,7 +68,7 @@ const TablePromotions = ({
       default: return status;
     }
   };
-
+  console.log('pro:',promotions);
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
       <table className="w-full table-auto">

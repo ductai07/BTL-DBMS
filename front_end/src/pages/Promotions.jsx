@@ -78,7 +78,9 @@ const Promotions = () => {
         status: discount.status || determineStatus(discount.startDate || discount.startTime, discount.endDate || discount.endTime),
         usageCount: discount.usageCount || 0,
         applyTo: discount.applyTo || "All",
-        description: discount.description || ""
+        description: discount.description || "",
+        quantity: discount.quantity || 0,
+        discountValue: discount.discountValue || discount.value || 0,
       }));
       
       console.log("Formatted promotions:", formattedPromotions);
@@ -161,8 +163,9 @@ const Promotions = () => {
       };
       
       let response;
-      
-      if (newPromotion.id) {
+      console.log('promotionData: ', promotionData)
+      console.log('newPromotion: ', newPromotion)
+      if (newPromotion.id < 100000) {
         // Edit existing promotion
         response = await fetch(API_ENDPOINTS.PROMOTION_EDIT(newPromotion.id), {
           method: "PATCH",
@@ -310,7 +313,9 @@ const Promotions = () => {
     usageCount: 0,
     applyTo: "",
     description: "",
-    id: Date.now(),
+    id: null,
+    quantity: 0,
+    discountValue: 0,
   });
   
   const entry = useRef({});
