@@ -73,6 +73,10 @@ export const Select = ({
         queryRef.current.SearchKey = "status";
         queryRef.current.SearchValue = option.key; // Sửa: dùng option.key thay vì option.value
       }
+      if(keySearch === 'type'){
+        queryRef.current.SearchKey = 'type';
+        queryRef.current.SearchValue = option.value; // Sửa: dùng option.key thay vì option.value
+      }
     }
 
     setIsOpen(false);

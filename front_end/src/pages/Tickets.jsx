@@ -6,6 +6,7 @@ import TableTickets from "../component/TableTickets";
 import AddTicketModal from "../component/AddTicketModal";
 import Search from "../component/Search";
 import { formatCurrency } from "../utils/formatUtils";
+import Pagination from "../component/Pagination";
 
 // Ticket Details Modal Component
 const TicketDetailsModal = ({ isOpen, onClose, ticket, formatDate, formatCurrency }) => {
@@ -144,7 +145,7 @@ const Tickets = () => {
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
-    pageSize: 20,
+    pageSize: 5, // Set limit to 5
     total: 0
   });
   
@@ -704,57 +705,10 @@ const Tickets = () => {
           
           {/* Pagination */}
           {pagination.totalPages > 1 && (
-            <div className="flex justify-center mt-6">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange(Math.max(1, pagination.currentPage - 1))}
-                  disabled={pagination.currentPage === 1}
-                  className={`px-3 py-1 rounded ${pagination.currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
-                >
-                  Trước
-                </button>
-                
-                <div className="flex items-center gap-1">
-                  {[...Array(pagination.totalPages)].map((_, i) => {
-                    // Show max 5 page numbers with ellipsis
-                    if (
-                      pagination.totalPages <= 5 ||
-                      i + 1 === 1 ||
-                      i + 1 === pagination.totalPages ||
-                      (i + 1 >= pagination.currentPage - 1 && i + 1 <= pagination.currentPage + 1)
-                    ) {
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => handlePageChange(i + 1)}
-                          className={`w-8 h-8 flex items-center justify-center rounded ${
-                            pagination.currentPage === i + 1
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                          }`}
-                        >
-                          {i + 1}
-                        </button>
-                      );
-                    } else if (
-                      (i === 1 && pagination.currentPage > 3) ||
-                      (i === pagination.totalPages - 2 && pagination.currentPage < pagination.totalPages - 2)
-                    ) {
-                      return <span key={i}>...</span>;
-                    }
-                    return null;
-                  })}
-                </div>
-                
-                <button
-                  onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.currentPage + 1))}
-                  disabled={pagination.currentPage === pagination.totalPages}
-                  className={`px-3 py-1 rounded ${pagination.currentPage === pagination.totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
-                >
-                  Tiếp
-                </button>
-              </div>
-            </div>
+            <Pagination 
+              pagination={pagination} 
+              onPageChange={handlePageChange} 
+            />
           )}
         </>
       )}

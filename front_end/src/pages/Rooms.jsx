@@ -259,7 +259,7 @@ const Rooms = () => {
       queryRef.current.Page = currentPage;
       handleSearch();
     }
-  }, [currentPage]);
+  }, [currentPage, search]);
 
   // Don't auto-trigger search on other filter changes - let the user press the search button
 
@@ -335,7 +335,8 @@ const Rooms = () => {
                   queryRef={queryRef}
                   keySearch={"type"}
                   onChange={(value) => {
-                    queryRef.current.type = value;
+                    queryRef.current.SearchKey = "type"; 
+                    queryRef.current.SearchValue = value;
                     setDefaultRoomTypes(value);
                     handleSearch();
                   }}
@@ -349,12 +350,12 @@ const Rooms = () => {
               >
                 Đặt lại bộ lọc
               </button>
-              <button
+              {/* <button
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center"
                 onClick={handleSearch}
               >
                 Tìm kiếm
-              </button>
+              </button> */}
             </div>
           </div>
           <div className="flex items-start">

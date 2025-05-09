@@ -6,6 +6,8 @@ import TablePromotions from "../component/TablePromotions";
 import AddPromotionModal from "../component/AddPromotionModal";
 import { formatCurrency } from "../utils/formatUtils";
 import { API_ENDPOINTS } from "../config/api";
+// Thêm import Pagination
+import Pagination from "../component/Pagination";
 
 const Promotions = () => {
   // State for promotions data
@@ -321,6 +323,12 @@ const Promotions = () => {
 
   const [Delete, setDelete] = useState(false);
 
+  // Thêm hàm xử lý thay đổi trang
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({ ...prev, currentPage: newPage }));
+  };
+  
+  // Trong phần return, thêm component Pagination sau TablePromotions
   return (
     <div className="w-[100%] h-[100vh] bg-neutral-100 p-5 overflow-auto">
       <Header title={"Promotion Management"} />
@@ -383,14 +391,14 @@ const Promotions = () => {
             />
           </div>
           <button
-            className="flex items-center justify-center  mx-auto bg-blue-600 hover:bg-blue-400 text-white px-4 py-2 rounded-md font-medium"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-400 text-white px-4 py-2 rounded-md font-medium"
             onClick={() => {
               setIsModalOpen(true);
               changeEntry(["Create new promotion", "Create"]);
             }}
           >
             <FaPlus />
-            New promotion
+            <span>New promotion</span>
           </button>
         </div>
         
@@ -410,17 +418,27 @@ const Promotions = () => {
             </p>
           </div>
         ) : (
-          <TablePromotions
-            columnNames={columnNames}
-            promotions={promotions}
-            setOpen={setIsModalOpen}
-            setPromotionInfo={setPromotionInfo}
-            changeEntry={changeEntry}
-            handleDelete={handleDelete}
-          />
+          <>
+            <TablePromotions
+              columnNames={columnNames}
+              promotions={promotions}
+              setOpen={setIsModalOpen}
+              setPromotionInfo={setPromotionInfo}
+              changeEntry={changeEntry}
+              handleDelete={handleDelete}
+            />
+            
+            {/* Thêm phân trang */}
+            {pagination.totalPages > 1 && (
+              <Pagination 
+                pagination={pagination} 
+                onPageChange={handlePageChange} 
+              />
+            )}
+          </>
         )}
       </div>
-      
+
       <AddPromotionModal
         title={entry.current.title}
         isOpen={isModalOpen}

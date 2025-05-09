@@ -615,12 +615,12 @@ const Showtime = () => {
           >
             Đặt lại
           </div>
-          <div
+          {/* <div
             className="button flex items-center justify-center hover:cursor-pointer"
             onClick={fetchShowtimes}
           >
             Tìm kiếm
-          </div>
+          </div> */}
         </div>
       </div>
 
